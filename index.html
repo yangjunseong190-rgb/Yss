@@ -3,470 +3,496 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>모바일 AI 유전 진화 시뮬레이터</title>
+  <title>월드박스 픽셀 시뮬레이터</title>
   
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="AI 진화 시뮬">
-  <meta name="theme-color" content="#121212">
+  <meta name="apple-mobile-web-app-title" content="월드박스">
+  <meta name="theme-color" content="#1a1a1a">
 
   <style>
-    * { box-sizing: border-box; touch-action: manipulation; }
+    * { box-sizing: border-box; touch-action: none; user-select: none; -webkit-user-select: none; }
     body { 
       margin: 0; 
-      padding: 8px;
+      padding: 0; 
       background: #121212; 
       color: #eee; 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      min-height: 100vh;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
-    h2 { margin: 4px 0 8px 0; font-size: 1.0rem; text-align: center; }
-    .stats { 
-      width: 100%;
-      max-width: 500px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-      background: #1e1e1e;
-      padding: 8px 12px;
-      border-radius: 8px;
+
+    /* 월드박스 상단 상태바 */
+    .header {
+      height: 44px;
+      background: #222226;
+      border-bottom: 2px solid #333338;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
       font-size: 0.8rem;
-      margin-bottom: 8px;
+      font-weight: bold;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     }
-    canvas { 
-      background: #181818; 
-      border-radius: 10px; 
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
-      width: 100%;
-      max-width: 500px;
-      height: auto;
-      touch-action: none;
+    .stat-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #141416;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #3a3a40;
     }
-    .controls { 
-      width: 100%;
-      max-width: 500px;
-      display: flex; 
-      gap: 6px; 
-      margin-top: 8px; 
-      flex-wrap: wrap;
-    }
-    button { 
+
+    /* 메인 캔버스 영역 */
+    #canvas-container {
       flex: 1;
-      min-width: 70px;
-      padding: 10px 4px; 
-      background: #2563eb; 
-      color: white; 
-      border: none; 
-      border-radius: 8px; 
-      font-weight: bold; 
-      font-size: 0.75rem;
-      cursor: pointer; 
-      -webkit-tap-highlight-color: transparent;
+      position: relative;
+      background: #2b3925; /* 월드박스 잔디색 */
+      overflow: hidden;
     }
-    button:active { opacity: 0.8; }
-    button.danger { background: #dc2626; }
-    button.warn { background: #d97706; }
-    .hint { font-size: 0.7rem; color: #aaa; margin-top: 6px; text-align: center; }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated; /* 픽셀 아트 스타일 정밀 표현 */
+    }
+
+    /* 우측 줌 조작 버튼 (월드박스 UI 스타일) */
+    .zoom-controls {
+      position: absolute;
+      right: 12px;
+      bottom: 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 20;
+    }
+    .zoom-btn {
+      width: 42px;
+      height: 42px;
+      background: #3b3b42;
+      color: #fff;
+      border: 2px solid #555560;
+      border-radius: 10px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      cursor: pointer;
+    }
+    .zoom-btn:active { background: #555560; transform: scale(0.95); }
+
+    /* 월드박스 하단 갓-파워 툴바 */
+    .toolbar {
+      height: 64px;
+      background: #1c1c20;
+      border-top: 2px solid #3a3a40;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 10px;
+      z-index: 10;
+    }
+    .tool-btn {
+      flex: 1;
+      max-width: 75px;
+      height: 48px;
+      background: #2a2a30;
+      border: 2px solid #44444e;
+      border-radius: 8px;
+      color: #ccc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      gap: 2px;
+      cursor: pointer;
+    }
+    .tool-btn.active {
+      background: #2563eb;
+      border-color: #60a5fa;
+      color: #fff;
+      font-weight: bold;
+    }
+    .tool-btn span { font-size: 1.1rem; }
   </style>
 </head>
 <body>
-  <h2>대형 맵: AI 유전 진화 시뮬레이터</h2>
-  
-  <div class="stats">
-    <div>개체 수: <strong id="popCount">0</strong> / 포식자: <strong id="predCount">0</strong></div>
-    <div>최고 세대: <strong id="maxGen">1</strong></div>
-    <div>평균 속도: <strong id="avgSpeed">0</strong></div>
-    <div>평균 시야: <strong id="avgSense">0</strong></div>
+
+  <!-- 상단 요약 정보 -->
+  <div class="header">
+    <div class="stat-badge">👤 인구: <span id="popCount" style="color:#60a5fa">0</span></div>
+    <div class="stat-badge">🍎 음식: <span id="foodCount" style="color:#4ade80">0</span></div>
+    <div class="stat-badge">👑 최고세대: <span id="maxGen" style="color:#facc15">1</span></div>
   </div>
 
-  <canvas id="canvas"></canvas>
-  <div class="hint">💡 드래그: 시점 이동 | 두 손가락 핀치: 확대/축소</div>
+  <!-- 맵 영역 -->
+  <div id="canvas-container">
+    <canvas id="canvas"></canvas>
+    
+    <!-- 터치 조작 개선용 줌 버튼 -->
+    <div class="zoom-controls">
+      <div class="zoom-btn" onclick="zoom(1.25)">+</div>
+      <div class="zoom-btn" onclick="zoom(0.8)">-</div>
+      <div class="zoom-btn" style="font-size: 0.8rem;" onclick="resetCamera()">[ ]</div>
+    </div>
+  </div>
 
-  <div class="controls">
-    <button onclick="addFood(30)">음식 30개</button>
-    <button class="warn" onclick="addPoison(15)">독 15개</button>
-    <button class="danger" onclick="addPredator(1)">포식자 추가</button>
-    <button class="danger" onclick="triggerDisaster()">재앙(50%)</button>
-    <button onclick="resetCamera()">시점 리셋</button>
+  <!-- 하단 월드박스 스타일 파워 선택 툴바 -->
+  <div class="toolbar">
+    <button class="tool-btn active" id="tool-spawn" onclick="selectTool('spawn')">
+      <span>🚶</span>사람 생성
+    </button>
+    <button class="tool-btn" id="tool-food" onclick="selectTool('food')">
+      <span>🍎</span>음식 투하
+    </button>
+    <button class="tool-btn" id="tool-heal" onclick="selectTool('heal')">
+      <span>💖</span>치유의 비
+    </button>
+    <button class="tool-btn" id="tool-lightning" onclick="selectTool('lightning')">
+      <span>⚡</span>신벌(번개)
+    </button>
+    <button class="tool-btn" id="tool-drag" onclick="selectTool('drag')">
+      <span>✋</span>시점 이동
+    </button>
   </div>
 
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+    const container = document.getElementById('canvas-container');
 
-    const width = Math.min(window.innerWidth - 16, 500);
-    const height = Math.floor(width * 1.2);
-    canvas.width = width;
-    canvas.height = height;
+    function resizeCanvas() {
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
-    // 대형 월드 크기 설정 (기존의 3배)
-    const WORLD_WIDTH = 2000;
-    const WORLD_HEIGHT = 2000;
+    // 월드 크기
+    const WORLD_WIDTH = 2400;
+    const WORLD_HEIGHT = 2400;
 
-    // 카메라 (변환) 상태
-    let scale = 0.35; 
-    let offsetX = (width - WORLD_WIDTH * scale) / 2;
-    let offsetY = (height - WORLD_HEIGHT * scale) / 2;
+    // 카메라 변환 (시점 & 확대/축소)
+    let scale = 0.5;
+    let offsetX = (canvas.width - WORLD_WIDTH * scale) / 2;
+    let offsetY = (canvas.height - WORLD_HEIGHT * scale) / 2;
 
-    let agents = [];
-    let predators = [];
+    let currentTool = 'spawn';
+    let humans = [];
     let foods = [];
-    let poisons = [];
+    let effects = []; // 번개/치유 이펙트
     let maxGeneration = 1;
 
-    // 카메라 변환을 포함한 좌표 계산
-    function screenToWorld(sx, sy) {
-      return {
-        x: (sx - offsetX) / scale,
-        y: (sy - offsetY) / scale
-      };
-    }
+    // 피부톤 및 옷 색상 (월드박스 스타일 다양성)
+    const skinColors = ['#ffdbac', '#f1c27d', '#e0ac69', '#8d5524', '#c68642'];
+    const clothesColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6b7280'];
 
-    class Agent {
+    class Human {
       constructor(x, y, dna = null, generation = 1) {
         this.x = x;
         this.y = y;
-        this.energy = 100;
+        this.hp = 100;
+        this.maxHp = 100;
+        this.energy = 80;
+        this.age = 0;
         this.generation = generation;
         
+        this.skin = skinColors[Math.floor(Math.random() * skinColors.length)];
+        this.clothes = clothesColors[Math.floor(Math.random() * clothesColors.length)];
+
         if (dna) {
-          this.speed = Math.max(0.8, dna.speed + (Math.random() - 0.5) * 0.8);
-          this.sense = Math.max(20, dna.sense + (Math.random() - 0.5) * 10);
+          this.speed = Math.max(1.0, dna.speed + (Math.random() - 0.5) * 0.4);
+          this.sense = Math.max(40, dna.sense + (Math.random() - 0.5) * 10);
         } else {
-          this.speed = 2.0 + Math.random();
-          this.sense = 50 + Math.random() * 40;
+          this.speed = 1.8 + Math.random() * 0.8;
+          this.sense = 80 + Math.random() * 40;
         }
 
         this.vx = (Math.random() - 0.5) * this.speed;
         this.vy = (Math.random() - 0.5) * this.speed;
+        this.walkTimer = 0;
       }
 
       update() {
-        const cost = 0.04 + (this.speed * this.speed * 0.015) + (this.sense * 0.0003);
-        this.energy -= cost;
+        this.age += 0.02;
+        this.energy -= 0.03 + (this.speed * 0.01);
 
-        let targetX = 0;
-        let targetY = 0;
-        let hasTarget = false;
-
-        // 1. 포식자 도망
-        let closestPred = null;
-        let minPredDist = Infinity;
-        for (let p of predators) {
-          const d = Math.hypot(p.x - this.x, p.y - this.y);
-          if (d < this.sense && d < minPredDist) {
-            minPredDist = d;
-            closestPred = p;
-          }
+        // 배고픔 피해
+        if (this.energy <= 0) {
+          this.energy = 0;
+          this.hp -= 0.15;
         }
 
-        if (closestPred) {
-          const angle = Math.atan2(this.y - closestPred.y, this.x - closestPred.x);
-          targetX = Math.cos(angle) * this.speed;
-          targetY = Math.sin(angle) * this.speed;
-          hasTarget = true;
-        } else {
-          // 2. 음식 추적 및 독 회피
-          let bestScore = -Infinity;
-          let bestItem = null;
-
-          for (let f of foods) {
-            const d = Math.hypot(f.x - this.x, f.y - this.y);
-            if (d < this.sense) {
-              const score = 1 / d;
-              if (score > bestScore) {
-                bestScore = score;
-                bestItem = { item: f, type: 'food', dist: d };
-              }
-            }
-          }
-
-          for (let p of poisons) {
-            const d = Math.hypot(p.x - this.x, p.y - this.y);
-            if (d < this.sense * 0.6) {
-              const score = -2 / d;
-              if (score > bestScore) {
-                bestScore = score;
-                bestItem = { item: p, type: 'poison', dist: d };
-              }
-            }
-          }
-
-          if (bestItem) {
-            if (bestItem.type === 'food') {
-              const angle = Math.atan2(bestItem.item.y - this.y, bestItem.item.x - this.x);
-              targetX = Math.cos(angle) * this.speed;
-              targetY = Math.sin(angle) * this.speed;
-              hasTarget = true;
-
-              if (bestItem.dist < 10) {
-                this.energy += 45;
-                foods = foods.filter(f => f !== bestItem.item);
-              }
-            } else if (bestItem.type === 'poison') {
-              const angle = Math.atan2(this.y - bestItem.item.y, this.x - bestItem.item.x);
-              targetX = Math.cos(angle) * this.speed;
-              targetY = Math.sin(angle) * this.speed;
-              hasTarget = true;
-            }
-          }
-        }
-
-        // 독 충돌 확인
-        for (let p of poisons) {
-          if (Math.hypot(p.x - this.x, p.y - this.y) < 10) {
-            this.energy -= 60;
-            poisons = poisons.filter(item => item !== p);
-            break;
-          }
-        }
-
-        if (hasTarget) {
-          this.vx = targetX;
-          this.vy = targetY;
-        }
-
-        this.x += this.vx;
-        this.y += this.vy;
-
-        if (this.x < 0 || this.x > WORLD_WIDTH) this.vx *= -1;
-        if (this.y < 0 || this.y > WORLD_HEIGHT) this.vy *= -1;
-
-        if (this.energy > 190) {
-          this.energy -= 95;
-          const nextGen = this.generation + 1;
-          if (nextGen > maxGeneration) maxGeneration = nextGen;
-          agents.push(new Agent(this.x, this.y, { speed: this.speed, sense: this.sense }, nextGen));
-        }
-      }
-
-      draw() {
-        // 시야 반경
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.sense, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
-        ctx.fill();
-
-        // 본체
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 8, 0, Math.PI * 2);
-        const r = Math.min(255, Math.floor(this.speed * 50));
-        const b = Math.min(255, Math.floor(this.sense * 2.5));
-        ctx.fillStyle = `rgb(${r}, 140, ${b})`;
-        ctx.fill();
-
-        // 체력바 (에너지 표시)
-        ctx.fillStyle = '#333';
-        ctx.fillRect(this.x - 10, this.y - 14, 20, 3);
-        ctx.fillStyle = this.energy > 50 ? '#4ade80' : '#ef4444';
-        ctx.fillRect(this.x - 10, this.y - 14, Math.max(0, (this.energy / 190) * 20), 3);
-      }
-    }
-
-    class Predator {
-      constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.speed = 2.6;
-        this.energy = 200;
-        this.vx = (Math.random() - 0.5) * this.speed;
-        this.vy = (Math.random() - 0.5) * this.speed;
-      }
-
-      update() {
-        this.energy -= 0.1;
-        let closestAgent = null;
+        // 주변 음식 찾기
+        let closestFood = null;
         let minDist = Infinity;
-
-        for (let a of agents) {
-          const d = Math.hypot(a.x - this.x, a.y - this.y);
-          if (d < 180 && d < minDist) {
+        for (let f of foods) {
+          const d = Math.hypot(f.x - this.x, f.y - this.y);
+          if (d < this.sense && d < minDist) {
             minDist = d;
-            closestAgent = a;
+            closestFood = f;
           }
         }
 
-        if (closestAgent) {
-          const angle = Math.atan2(closestAgent.y - this.y, closestAgent.x - this.x);
+        if (closestFood) {
+          const angle = Math.atan2(closestFood.y - this.y, closestFood.x - this.x);
           this.vx = Math.cos(angle) * this.speed;
           this.vy = Math.sin(angle) * this.speed;
 
-          if (minDist < 14) {
-            this.energy += 70;
-            agents = agents.filter(a => a !== closestAgent);
+          if (minDist < 12) {
+            this.energy = Math.min(100, this.energy + 50);
+            this.hp = Math.min(this.maxHp, this.hp + 20);
+            foods = foods.filter(item => item !== closestFood);
+          }
+        } else {
+          // 목표 없으면 랜덤 배회
+          this.walkTimer--;
+          if (this.walkTimer <= 0) {
+            const angle = Math.random() * Math.PI * 2;
+            this.vx = Math.cos(angle) * (this.speed * 0.6);
+            this.vy = Math.sin(angle) * (this.speed * 0.6);
+            this.walkTimer = Math.floor(Math.random() * 60) + 30;
           }
         }
 
         this.x += this.vx;
         this.y += this.vy;
 
-        if (this.x < 0 || this.x > WORLD_WIDTH) this.vx *= -1;
-        if (this.y < 0 || this.y > WORLD_HEIGHT) this.vy *= -1;
+        // 월드 경계 처리
+        if (this.x < 20 || this.x > WORLD_WIDTH - 20) this.vx *= -1;
+        if (this.y < 20 || this.y > WORLD_HEIGHT - 20) this.vy *= -1;
+
+        // 번식 (충분한 에너지 보유 시)
+        if (this.energy > 90 && this.age > 10) {
+          this.energy -= 50;
+          const nextGen = this.generation + 1;
+          if (nextGen > maxGeneration) maxGeneration = nextGen;
+          humans.push(new Human(this.x + (Math.random()*20-10), this.y + (Math.random()*20-10), { speed: this.speed, sense: this.sense }, nextGen));
+        }
       }
 
       draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 13, 0, Math.PI * 2);
-        ctx.fillStyle = '#ef4444';
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        // 픽셀 사람 캐릭터 그리기는 2D 픽셀 도트 형태로 렌더링
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // 1. 머리 (피부)
+        ctx.fillStyle = this.skin;
+        ctx.fillRect(-4, -12, 8, 7);
+
+        // 2. 몸통 (옷)
+        ctx.fillStyle = this.clothes;
+        ctx.fillRect(-5, -5, 10, 8);
+
+        // 3. 다리 (바지)
+        ctx.fillStyle = '#1f2937';
+        ctx.fillRect(-4, 3, 3, 5);
+        ctx.fillRect(1, 3, 3, 5);
+
+        // 4. 머리 위 체력바 (월드박스 스타일)
+        if (this.hp < this.maxHp || this.energy < 30) {
+          ctx.fillStyle = '#000';
+          ctx.fillRect(-8, -17, 16, 3);
+          ctx.fillStyle = this.hp > 40 ? '#22c55e' : '#ef4444';
+          ctx.fillRect(-8, -17, (this.hp / this.maxHp) * 16, 3);
+        }
+
+        ctx.restore();
       }
     }
 
-    // 터치 및 인터랙션 (드래그 & 핀치 줌)
-    let isDragging = false;
-    let startX = 0, startY = 0;
-    let initialPinchDist = null;
+    // 터치 & 마우스 드래그 / 갓 파워 클릭 처리
+    let isMouseDown = false;
+    let lastX = 0, lastY = 0;
 
-    canvas.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1) {
-        isDragging = true;
-        startX = e.touches[0].clientX - offsetX;
-        startY = e.touches[0].clientY - offsetY;
-      } else if (e.touches.length === 2) {
-        isDragging = false;
-        initialPinchDist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
+    function getTransformedPoint(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const screenX = clientX - rect.left;
+      const screenY = clientY - rect.top;
+      return {
+        x: (screenX - offsetX) / scale,
+        y: (screenY - offsetY) / scale,
+        screenX, screenY
+      };
+    }
+
+    function applyGodPower(pt) {
+      if (pt.x < 0 || pt.x > WORLD_WIDTH || pt.y < 0 || pt.y > WORLD_HEIGHT) return;
+
+      if (currentTool === 'spawn') {
+        for(let i=0; i<2; i++) {
+          humans.push(new Human(pt.x + (Math.random()*30-15), pt.y + (Math.random()*30-15)));
+        }
+      } else if (currentTool === 'food') {
+        for(let i=0; i<3; i++) {
+          foods.push({ x: pt.x + (Math.random()*40-20), y: pt.y + (Math.random()*40-20) });
+        }
+      } else if (currentTool === 'heal') {
+        effects.push({ type: 'heal', x: pt.x, y: pt.y, radius: 60, life: 20 });
+        for (let h of humans) {
+          if (Math.hypot(h.x - pt.x, h.y - pt.y) < 60) {
+            h.hp = h.maxHp;
+            h.energy = 100;
+          }
+        }
+      } else if (currentTool === 'lightning') {
+        effects.push({ type: 'lightning', x: pt.x, y: pt.y, radius: 40, life: 10 });
+        humans = humans.filter(h => Math.hypot(h.x - pt.x, h.y - pt.y) > 50);
+        foods = foods.filter(f => Math.hypot(f.x - pt.x, f.y - pt.y) > 50);
+      }
+    }
+
+    // 이벤트 핸들러 (통합 터치/마우스)
+    canvas.addEventListener('pointerdown', (e) => {
+      isMouseDown = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+
+      const pt = getTransformedPoint(e.clientX, e.clientY);
+      if (currentTool !== 'drag') {
+        applyGodPower(pt);
       }
     });
 
-    canvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      if (isDragging && e.touches.length === 1) {
-        offsetX = e.touches[0].clientX - startX;
-        offsetY = e.touches[0].clientY - startY;
-      } else if (e.touches.length === 2 && initialPinchDist) {
-        const newDist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-        const zoomFactor = newDist / initialPinchDist;
-        scale = Math.min(Math.max(scale * zoomFactor, 0.15), 1.5);
-        initialPinchDist = newDist;
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isMouseDown) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+
+      if (currentTool === 'drag') {
+        offsetX += dx;
+        offsetY += dy;
+      } else {
+        // 드래그하며 파워 계속 칠하기
+        const pt = getTransformedPoint(e.clientX, e.clientY);
+        if (Math.hypot(dx, dy) > 15) {
+          applyGodPower(pt);
+        }
       }
+      lastX = e.clientX;
+      lastY = e.clientY;
     });
 
-    canvas.addEventListener('touchend', () => {
-      isDragging = false;
-      initialPinchDist = null;
-    });
+    window.addEventListener('pointerup', () => isMouseDown = false);
 
-    function addFood(count) {
-      for (let i = 0; i < count; i++) {
-        foods.push({ x: Math.random() * (WORLD_WIDTH - 40) + 20, y: Math.random() * (WORLD_HEIGHT - 40) + 20 });
-      }
-    }
-
-    function addPoison(count) {
-      for (let i = 0; i < count; i++) {
-        poisons.push({ x: Math.random() * (WORLD_WIDTH - 40) + 20, y: Math.random() * (WORLD_HEIGHT - 40) + 20 });
-      }
-    }
-
-    function addPredator(count) {
-      for (let i = 0; i < count; i++) {
-        predators.push(new Predator(Math.random() * WORLD_WIDTH, Math.random() * WORLD_HEIGHT));
-      }
-    }
-
-    function triggerDisaster() {
-      agents = agents.filter(() => Math.random() > 0.5);
+    // 우측 버튼식 Zoom 조작
+    function zoom(factor) {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const newScale = Math.min(Math.max(scale * factor, 0.2), 2.5);
+      
+      offsetX = centerX - (centerX - offsetX) * (newScale / scale);
+      offsetY = centerY - (centerY - offsetY) * (newScale / scale);
+      scale = newScale;
     }
 
     function resetCamera() {
-      scale = 0.35;
-      offsetX = (width - WORLD_WIDTH * scale) / 2;
-      offsetY = (height - WORLD_HEIGHT * scale) / 2;
+      scale = 0.5;
+      offsetX = (canvas.width - WORLD_WIDTH * scale) / 2;
+      offsetY = (canvas.height - WORLD_HEIGHT * scale) / 2;
     }
 
-    function resetSim() {
-      agents = [];
-      predators = [];
+    function selectTool(toolName) {
+      currentTool = toolName;
+      document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`tool-${toolName}`).classList.add('active');
+    }
+
+    // 초기화
+    function init() {
+      humans = [];
       foods = [];
-      poisons = [];
-      maxGeneration = 1;
       resetCamera();
 
-      for (let i = 0; i < 25; i++) {
-        agents.push(new Agent(Math.random() * WORLD_WIDTH, Math.random() * WORLD_HEIGHT));
+      // 시작 시 마을 형성
+      for (let i = 0; i < 30; i++) {
+        humans.push(new Human(WORLD_WIDTH / 2 + (Math.random()*300-150), WORLD_HEIGHT / 2 + (Math.random()*300-150)));
       }
-      addFood(80);
-      addPoison(30);
-      addPredator(2);
-    }
-
-    function updateStats() {
-      document.getElementById('popCount').innerText = agents.length;
-      document.getElementById('predCount').innerText = predators.length;
-      document.getElementById('maxGen').innerText = maxGeneration;
-
-      if (agents.length > 0) {
-        const avgSpd = agents.reduce((a, b) => a + b.speed, 0) / agents.length;
-        const avgSns = agents.reduce((a, b) => a + b.sense, 0) / agents.length;
-        document.getElementById('avgSpeed').innerText = avgSpd.toFixed(2);
-        document.getElementById('avgSense').innerText = avgSns.toFixed(1);
+      for (let i = 0; i < 60; i++) {
+        foods.push({ x: WORLD_WIDTH / 2 + (Math.random()*500-250), y: WORLD_HEIGHT / 2 + (Math.random()*500-250) });
       }
     }
 
+    // 메인 루프
     function loop() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       ctx.save();
-      // 카메라 시점 변환 적용
       ctx.translate(offsetX, offsetY);
       ctx.scale(scale, scale);
 
-      // 대형 월드 테두리 시각화
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = 4;
+      // 월드 배경 및 그리드 (월드박스 스타일 격자 잔디)
+      ctx.fillStyle = '#2b3925';
+      ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+      ctx.strokeStyle = '#232e1e';
+      ctx.lineWidth = 2;
       ctx.strokeRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-      if (Math.random() < 0.15) addFood(1);
-      if (Math.random() < 0.03) addPoison(1);
-
-      // 음식 (초록색)
-      ctx.fillStyle = '#4ade80';
-      for (let food of foods) {
-        ctx.fillRect(food.x - 4, food.y - 4, 8, 8);
+      // 주기적 자연 음식 생성
+      if (Math.random() < 0.2) {
+        foods.push({ x: Math.random() * (WORLD_WIDTH - 100) + 50, y: Math.random() * (WORLD_HEIGHT - 100) + 50 });
       }
 
-      // 독 (보라색 해골 느낌)
-      ctx.fillStyle = '#a855f7';
-      for (let p of poisons) {
+      // 음식 렌더링 (사과 아이콘 형태)
+      ctx.fillStyle = '#ef4444';
+      for (let f of foods) {
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+        ctx.arc(f.x, f.y, 4, 0, Math.PI * 2);
         ctx.fill();
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(f.x - 1, f.y - 6, 2, 2);
+        ctx.fillStyle = '#ef4444';
       }
 
-      // 포식자
-      predators = predators.filter(p => p.energy > 0);
-      for (let p of predators) {
-        p.update();
-        p.draw();
+      // 사람 업데이트 및 렌더링
+      humans = humans.filter(h => h.hp > 0);
+      for (let h of humans) {
+        h.update();
+        h.draw();
       }
 
-      // 일반 개체
-      agents = agents.filter(a => a.energy > 0);
-      for (let agent of agents) {
-        agent.update();
-        agent.draw();
+      // 이펙트 렌더링 (번개/힐)
+      for (let i = effects.length - 1; i >= 0; i--) {
+        let eff = effects[i];
+        eff.life--;
+        ctx.beginPath();
+        ctx.arc(eff.x, eff.y, eff.radius, 0, Math.PI * 2);
+        if (eff.type === 'heal') {
+          ctx.fillStyle = `rgba(74, 222, 128, ${eff.life / 20 * 0.4})`;
+          ctx.fill();
+        } else if (eff.type === 'lightning') {
+          ctx.fillStyle = `rgba(255, 255, 255, ${eff.life / 10 * 0.8})`;
+          ctx.fill();
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 4;
+          ctx.stroke();
+        }
+        if (eff.life <= 0) effects.splice(i, 1);
       }
 
       ctx.restore();
 
-      updateStats();
+      // UI 정보 갱신
+      document.getElementById('popCount').innerText = humans.length;
+      document.getElementById('foodCount').innerText = foods.length;
+      document.getElementById('maxGen').innerText = maxGeneration;
+
       requestAnimationFrame(loop);
     }
 
-    resetSim();
+    init();
     loop();
   </script>
 </body>
