@@ -3,16 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>월드박스 픽셀 시뮬레이터</title>
+  <title>월드박스 디럭스 시뮬레이터</title>
   
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="월드박스">
   <meta name="theme-color" content="#1a1a1a">
 
   <style>
-    /* iOS 꾹 누르기/선택/하이라이트 차단 */
     * { 
       box-sizing: border-box; 
       touch-action: none; 
@@ -25,7 +23,7 @@
     body { 
       margin: 0; 
       padding: 0; 
-      background: #121212; 
+      background: #111; 
       color: #eee; 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
       overflow: hidden;
@@ -35,34 +33,59 @@
       flex-direction: column;
     }
 
-    /* 상단 상태바 */
+    /* 상단 요약바 및 시간 컨트롤 */
     .header {
-      height: 44px;
-      background: #222226;
-      border-bottom: 2px solid #333338;
+      height: 48px;
+      background: #1e1e24;
+      border-bottom: 2px solid #33333d;
       display: flex;
       align-items: center;
-      justify-content: space-around;
-      font-size: 0.8rem;
-      font-weight: bold;
+      justify-content: space-between;
+      padding: 0 10px;
       z-index: 10;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      font-size: 0.75rem;
+      font-weight: bold;
     }
+
+    .stats-group {
+      display: flex;
+      gap: 6px;
+    }
+
     .stat-badge {
       display: flex;
       align-items: center;
-      gap: 4px;
-      background: #141416;
-      padding: 4px 8px;
+      gap: 3px;
+      background: #121215;
+      padding: 4px 6px;
       border-radius: 6px;
-      border: 1px solid #3a3a40;
+      border: 1px solid #3a3a42;
     }
 
-    /* 메인 캔버스 영역 */
+    .speed-controls {
+      display: flex;
+      gap: 4px;
+    }
+
+    .speed-btn {
+      background: #2a2a32;
+      border: 1px solid #444450;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+    .speed-btn.active {
+      background: #ef4444;
+      border-color: #f87171;
+    }
+
+    /* 메인 캔버스 */
     #canvas-container {
       flex: 1;
       position: relative;
-      background: #2b3925;
+      background: #1a2516;
       overflow: hidden;
     }
     canvas {
@@ -72,77 +95,90 @@
       image-rendering: pixelated;
     }
 
-    /* 우측 보조 줌 버튼 */
+    /* 화면 줌 버튼 */
     .zoom-controls {
       position: absolute;
       right: 12px;
-      bottom: 80px;
+      bottom: 90px;
       display: flex;
       flex-direction: column;
       gap: 6px;
       z-index: 20;
     }
     .zoom-btn {
-      width: 42px;
-      height: 42px;
-      background: #3b3b42;
+      width: 40px;
+      height: 40px;
+      background: #2a2a32;
       color: #fff;
-      border: 2px solid #555560;
+      border: 2px solid #444452;
       border-radius: 10px;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       font-weight: bold;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.4);
     }
-    .zoom-btn:active { background: #555560; transform: scale(0.95); }
 
-    /* 하단 툴바 (시점 이동 버튼 제거) */
-    .toolbar {
-      height: 64px;
-      background: #1c1c20;
-      border-top: 2px solid #3a3a40;
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      padding: 0 10px;
+    /* 하단 스크롤형 갓 파워 툴바 */
+    .toolbar-wrapper {
+      height: 72px;
+      background: #16161a;
+      border-top: 2px solid #33333d;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+      padding: 8px;
       z-index: 10;
     }
+    .toolbar-wrapper::-webkit-scrollbar { display: none; }
+
+    .toolbar {
+      display: inline-flex;
+      gap: 8px;
+    }
+
     .tool-btn {
-      flex: 1;
-      max-width: 80px;
-      height: 48px;
-      background: #2a2a30;
-      border: 2px solid #44444e;
+      width: 64px;
+      height: 52px;
+      background: #25252e;
+      border: 2px solid #3f3f4d;
       border-radius: 8px;
       color: #ccc;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-size: 0.65rem;
+      font-size: 0.6rem;
       gap: 2px;
       cursor: pointer;
-      transition: all 0.15s ease;
+      flex-shrink: 0;
     }
     .tool-btn.active {
       background: #2563eb;
       border-color: #60a5fa;
       color: #fff;
       font-weight: bold;
-      box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+      box-shadow: 0 0 8px rgba(37, 99, 235, 0.6);
     }
     .tool-btn span { font-size: 1.1rem; }
   </style>
 </head>
 <body>
 
+  <!-- 상단 상태바 & 시간 배속 컨트롤 -->
   <div class="header">
-    <div class="stat-badge">👤 인구: <span id="popCount" style="color:#60a5fa">0</span></div>
-    <div class="stat-badge">🍎 음식: <span id="foodCount" style="color:#4ade80">0</span></div>
-    <div class="stat-badge">👑 최고세대: <span id="maxGen" style="color:#facc15">1</span></div>
+    <div class="stats-group">
+      <div class="stat-badge">🔴 <span id="redCount" style="color:#f87171">0</span></div>
+      <div class="stat-badge">🔵 <span id="blueCount" style="color:#60a5fa">0</span></div>
+      <div class="stat-badge">🧟 <span id="zombieCount" style="color:#4ade80">0</span></div>
+    </div>
+    
+    <div class="speed-controls">
+      <button class="speed-btn" id="spd-0" onclick="setSpeed(0)">⏸️</button>
+      <button class="speed-btn active" id="spd-1" onclick="setSpeed(1)">1x</button>
+      <button class="speed-btn" id="spd-5" onclick="setSpeed(5)">5x</button>
+    </div>
   </div>
 
   <div id="canvas-container">
@@ -151,28 +187,44 @@
     <div class="zoom-controls">
       <div class="zoom-btn" onclick="zoom(1.25)">+</div>
       <div class="zoom-btn" onclick="zoom(0.8)">-</div>
-      <div class="zoom-btn" style="font-size: 0.8rem;" onclick="resetCamera()">[ ]</div>
+      <div class="zoom-btn" style="font-size: 0.75rem;" onclick="resetCamera()">[ ]</div>
     </div>
   </div>
 
-  <!-- 하단 툴바: 선택된 도구를 한번 더 누르면 '시점 이동 모드'로 전환됨 -->
-  <div class="toolbar">
-    <button class="tool-btn active" id="tool-spawn" onclick="selectTool('spawn')">
-      <span>🚶</span>사람 생성
-    </button>
-    <button class="tool-btn" id="tool-food" onclick="selectTool('food')">
-      <span>🍎</span>음식 투하
-    </button>
-    <button class="tool-btn" id="tool-heal" onclick="selectTool('heal')">
-      <span>💖</span>치유의 비
-    </button>
-    <button class="tool-btn" id="tool-lightning" onclick="selectTool('lightning')">
-      <span>⚡</span>신벌(번개)
-    </button>
+  <!-- 하단 멀티 카테고리 툴바 (선택한 도구 다시 누르면 시점 이동 모드) -->
+  <div class="toolbar-wrapper">
+    <div class="toolbar">
+      <button class="tool-btn active" id="tool-red" onclick="selectTool('red')">
+        <span>🔴</span>레드국
+      </button>
+      <button class="tool-btn" id="tool-blue" onclick="selectTool('blue')">
+        <span>🔵</span>블루국
+      </button>
+      <button class="tool-btn" id="tool-tree" onclick="selectTool('tree')">
+        <span>🌲</span>나무 심기
+      </button>
+      <button class="tool-btn" id="tool-land" onclick="selectTool('land')">
+        <span>🌱</span>땅 생성
+      </button>
+      <button class="tool-btn" id="tool-water" onclick="selectTool('water')">
+        <span>🌊</span>바다 생성
+      </button>
+      <button class="tool-btn" id="tool-mountain" onclick="selectTool('mountain')">
+        <span>⛰️</span>산 생성
+      </button>
+      <button class="tool-btn" id="tool-zombie" onclick="selectTool('zombie')">
+        <span>🧟</span>좀비 감염
+      </button>
+      <button class="tool-btn" id="tool-meteor" onclick="selectTool('meteor')">
+        <span>☄️</span>운석 투하
+      </button>
+      <button class="tool-btn" id="tool-heal" onclick="selectTool('heal')">
+        <span>💖</span>치유의 비
+      </button>
+    </div>
   </div>
 
   <script>
-    // iOS 우클릭 및 길게 누르기 메뉴 차단
     window.addEventListener('contextmenu', (e) => e.preventDefault());
 
     const canvas = document.getElementById('canvas');
@@ -186,98 +238,132 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    const WORLD_WIDTH = 2400;
-    const WORLD_HEIGHT = 2400;
+    // 지형 타일 설정 (80x80 그리드)
+    const TILE_SIZE = 30;
+    const COLS = 80;
+    const ROWS = 80;
+    const WORLD_WIDTH = COLS * TILE_SIZE;
+    const WORLD_HEIGHT = ROWS * TILE_SIZE;
 
-    let scale = 0.5;
+    const TILE = { WATER: 0, LAND: 1, MOUNTAIN: 2 };
+    let grid = Array(COLS).fill(0).map(() => Array(ROWS).fill(TILE.LAND));
+
+    let scale = 0.4;
     let offsetX = (canvas.width - WORLD_WIDTH * scale) / 2;
     let offsetY = (canvas.height - WORLD_HEIGHT * scale) / 2;
 
-    let currentTool = 'spawn'; // 초기 도구
+    let currentTool = 'red';
+    let gameSpeed = 1;
+
     let humans = [];
-    let foods = [];
+    let zombies = [];
+    let buildings = [];
+    let trees = [];
+    let meteors = [];
     let effects = [];
-    let maxGeneration = 1;
 
-    const skinColors = ['#ffdbac', '#f1c27d', '#e0ac69', '#8d5524', '#c68642'];
-    const clothesColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6b7280'];
-
+    // 사람 클래스 (레드/블루 왕국, 전투, 채집, 건물 건설 지원)
     class Human {
-      constructor(x, y, dna = null, generation = 1) {
+      constructor(x, y, faction) {
         this.x = x;
         this.y = y;
+        this.faction = faction; // 'red' or 'blue'
         this.hp = 100;
         this.maxHp = 100;
-        this.energy = 80;
-        this.age = 0;
-        this.generation = generation;
-        
-        this.skin = skinColors[Math.floor(Math.random() * skinColors.length)];
-        this.clothes = clothesColors[Math.floor(Math.random() * clothesColors.length)];
-
-        if (dna) {
-          this.speed = Math.max(1.0, dna.speed + (Math.random() - 0.5) * 0.4);
-          this.sense = Math.max(40, dna.sense + (Math.random() - 0.5) * 10);
-        } else {
-          this.speed = 1.8 + Math.random() * 0.8;
-          this.sense = 80 + Math.random() * 40;
-        }
-
+        this.wood = 0;
+        this.speed = 1.6 + Math.random() * 0.6;
         this.vx = (Math.random() - 0.5) * this.speed;
         this.vy = (Math.random() - 0.5) * this.speed;
         this.walkTimer = 0;
       }
 
       update() {
-        this.age += 0.02;
-        this.energy -= 0.03 + (this.speed * 0.01);
-
-        if (this.energy <= 0) {
-          this.energy = 0;
-          this.hp -= 0.15;
+        // 산이나 바다에서는 속도 감소
+        const tileX = Math.floor(this.x / TILE_SIZE);
+        const tileY = Math.floor(this.y / TILE_SIZE);
+        let speedMult = 1;
+        if (tileX >= 0 && tileX < COLS && tileY >= 0 && tileY < ROWS) {
+          if (grid[tileX][tileY] === TILE.WATER) speedMult = 0.3;
+          if (grid[tileX][tileY] === TILE.MOUNTAIN) speedMult = 0.5;
         }
 
-        let closestFood = null;
-        let minDist = Infinity;
-        for (let f of foods) {
-          const d = Math.hypot(f.x - this.x, f.y - this.y);
-          if (d < this.sense && d < minDist) {
-            minDist = d;
-            closestFood = f;
+        // 1. 좀비나 적 왕국 감지 및 공격 (전쟁)
+        let target = null;
+        let minDist = 120;
+
+        // 좀비 최우선 공격/도망
+        for (let z of zombies) {
+          let d = Math.hypot(z.x - this.x, z.y - this.y);
+          if (d < minDist) { minDist = d; target = z; }
+        }
+
+        // 적 왕국 감지
+        if (!target) {
+          for (let h of humans) {
+            if (h.faction !== this.faction) {
+              let d = Math.hypot(h.x - this.x, h.y - this.y);
+              if (d < minDist) { minDist = d; target = h; }
+            }
           }
         }
 
-        if (closestFood) {
-          const angle = Math.atan2(closestFood.y - this.y, closestFood.x - this.x);
-          this.vx = Math.cos(angle) * this.speed;
-          this.vy = Math.sin(angle) * this.speed;
+        if (target) {
+          const angle = Math.atan2(target.y - this.y, target.x - this.x);
+          this.vx = Math.cos(angle) * this.speed * speedMult;
+          this.vy = Math.sin(angle) * this.speed * speedMult;
 
-          if (minDist < 12) {
-            this.energy = Math.min(100, this.energy + 50);
-            this.hp = Math.min(this.maxHp, this.hp + 20);
-            foods = foods.filter(item => item !== closestFood);
+          if (minDist < 10) {
+            target.hp -= 1.5; // 전투 수행
           }
         } else {
-          this.walkTimer--;
-          if (this.walkTimer <= 0) {
-            const angle = Math.random() * Math.PI * 2;
-            this.vx = Math.cos(angle) * (this.speed * 0.6);
-            this.vy = Math.sin(angle) * (this.speed * 0.6);
-            this.walkTimer = Math.floor(Math.random() * 60) + 30;
+          // 2. 근처 나무 채집 및 마을 건설
+          let nearestTree = null;
+          let treeDist = 150;
+          for (let t of trees) {
+            let d = Math.hypot(t.x - this.x, t.y - this.y);
+            if (d < treeDist) { treeDist = d; nearestTree = t; }
+          }
+
+          if (nearestTree && this.wood < 5) {
+            const angle = Math.atan2(nearestTree.y - this.y, nearestTree.x - this.x);
+            this.vx = Math.cos(angle) * this.speed * speedMult;
+            this.vy = Math.sin(angle) * this.speed * speedMult;
+
+            if (treeDist < 12) {
+              this.wood += 1;
+              trees = trees.filter(t => t !== nearestTree);
+            }
+          } else if (this.wood >= 5) {
+            // 목재 5개 모으면 집 건설
+            buildings.push({ x: this.x, y: this.y, faction: this.faction, hp: 150 });
+            this.wood = 0;
+          } else {
+            // 자유 배회
+            this.walkTimer--;
+            if (this.walkTimer <= 0) {
+              const angle = Math.random() * Math.PI * 2;
+              this.vx = Math.cos(angle) * this.speed * speedMult;
+              this.vy = Math.sin(angle) * this.speed * speedMult;
+              this.walkTimer = Math.floor(Math.random() * 50) + 30;
+            }
           }
         }
 
         this.x += this.vx;
         this.y += this.vy;
 
-        if (this.x < 20 || this.x > WORLD_WIDTH - 20) this.vx *= -1;
-        if (this.y < 20 || this.y > WORLD_HEIGHT - 20) this.vy *= -1;
+        // 경계 제한
+        this.x = Math.max(10, Math.min(WORLD_WIDTH - 10, this.x));
+        this.y = Math.max(10, Math.min(WORLD_HEIGHT - 10, this.y));
 
-        if (this.energy > 90 && this.age > 10) {
-          this.energy -= 50;
-          const nextGen = this.generation + 1;
-          if (nextGen > maxGeneration) maxGeneration = nextGen;
-          humans.push(new Human(this.x + (Math.random()*20-10), this.y + (Math.random()*20-10), { speed: this.speed, sense: this.sense }, nextGen));
+        // 건물 부근에서 번식 및 체력 회복
+        for (let b of buildings) {
+          if (b.faction === this.faction && Math.hypot(b.x - this.x, b.y - this.y) < 40) {
+            this.hp = Math.min(this.maxHp, this.hp + 0.1);
+            if (Math.random() < 0.002 && humans.length < 300) {
+              humans.push(new Human(this.x + 10, this.y + 10, this.faction));
+            }
+          }
         }
       }
 
@@ -285,64 +371,174 @@
         ctx.save();
         ctx.translate(this.x, this.y);
 
-        ctx.fillStyle = this.skin;
-        ctx.fillRect(-4, -12, 8, 7);
+        // 피부 및 진영별 옷
+        ctx.fillStyle = '#ffdbac';
+        ctx.fillRect(-3, -10, 6, 5);
 
-        ctx.fillStyle = this.clothes;
-        ctx.fillRect(-5, -5, 10, 8);
+        ctx.fillStyle = this.faction === 'red' ? '#ef4444' : '#3b82f6';
+        ctx.fillRect(-4, -5, 8, 7);
 
         ctx.fillStyle = '#1f2937';
-        ctx.fillRect(-4, 3, 3, 5);
-        ctx.fillRect(1, 3, 3, 5);
+        ctx.fillRect(-3, 2, 2, 4);
+        ctx.fillRect(1, 2, 2, 4);
 
-        if (this.hp < this.maxHp || this.energy < 30) {
+        if (this.hp < this.maxHp) {
           ctx.fillStyle = '#000';
-          ctx.fillRect(-8, -17, 16, 3);
-          ctx.fillStyle = this.hp > 40 ? '#22c55e' : '#ef4444';
-          ctx.fillRect(-8, -17, (this.hp / this.maxHp) * 16, 3);
+          ctx.fillRect(-6, -14, 12, 2);
+          ctx.fillStyle = '#22c55e';
+          ctx.fillRect(-6, -14, (this.hp / this.maxHp) * 12, 2);
         }
 
         ctx.restore();
       }
     }
 
-    function getTransformedPoint(clientX, clientY) {
-      const rect = canvas.getBoundingClientRect();
-      const screenX = clientX - rect.left;
-      const screenY = clientY - rect.top;
-      return {
-        x: (screenX - offsetX) / scale,
-        y: (screenY - offsetY) / scale
-      };
-    }
+    // 좀비 클래스
+    class Zombie {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.hp = 80;
+        this.speed = 1.2;
+      }
 
-    function applyGodPower(pt) {
-      if (pt.x < 0 || pt.x > WORLD_WIDTH || pt.y < 0 || pt.y > WORLD_HEIGHT) return;
+      update() {
+        let target = null;
+        let minDist = 200;
 
-      if (currentTool === 'spawn') {
-        for(let i=0; i<2; i++) {
-          humans.push(new Human(pt.x + (Math.random()*30-15), pt.y + (Math.random()*30-15)));
-        }
-      } else if (currentTool === 'food') {
-        for(let i=0; i<3; i++) {
-          foods.push({ x: pt.x + (Math.random()*40-20), y: pt.y + (Math.random()*40-20) });
-        }
-      } else if (currentTool === 'heal') {
-        effects.push({ type: 'heal', x: pt.x, y: pt.y, radius: 60, life: 20 });
         for (let h of humans) {
-          if (Math.hypot(h.x - pt.x, h.y - pt.y) < 60) {
-            h.hp = h.maxHp;
-            h.energy = 100;
-          }
+          let d = Math.hypot(h.x - this.x, h.y - this.y);
+          if (d < minDist) { minDist = d; target = h; }
         }
-      } else if (currentTool === 'lightning') {
-        effects.push({ type: 'lightning', x: pt.x, y: pt.y, radius: 40, life: 10 });
-        humans = humans.filter(h => Math.hypot(h.x - pt.x, h.y - pt.y) > 50);
-        foods = foods.filter(f => Math.hypot(f.x - pt.x, f.y - pt.y) > 50);
+
+        if (target) {
+          const angle = Math.atan2(target.y - this.y, target.x - this.x);
+          this.x += Math.cos(angle) * this.speed;
+          this.y += Math.sin(angle) * this.speed;
+
+          if (minDist < 10) {
+            target.hp -= 3;
+            // 사람이 죽으면 좀비로 전환
+            if (target.hp <= 0) {
+              zombies.push(new Zombie(target.x, target.y));
+            }
+          }
+        } else {
+          this.x += (Math.random() - 0.5) * this.speed;
+          this.y += (Math.random() - 0.5) * this.speed;
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.fillStyle = '#4ade80'; // 녹색 피부
+        ctx.fillRect(-3, -10, 6, 5);
+        ctx.fillStyle = '#374151';
+        ctx.fillRect(-4, -5, 8, 7);
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(-3, 2, 2, 4);
+        ctx.fillRect(1, 2, 2, 4);
+        ctx.restore();
       }
     }
 
-    // 터치 및 멀티터치(두손가락 확대/이동) 로직
+    // 운석 재앙 클래스
+    class Meteor {
+      constructor(targetX, targetY) {
+        this.x = targetX + 200;
+        this.y = targetY - 400;
+        this.targetX = targetX;
+        this.targetY = targetY;
+        this.speed = 18;
+        this.exploded = false;
+      }
+
+      update() {
+        const angle = Math.atan2(this.targetY - this.y, this.targetX - this.x);
+        this.x += Math.cos(angle) * this.speed;
+        this.y += Math.sin(angle) * this.speed;
+
+        if (Math.hypot(this.targetX - this.x, this.targetY - this.y) < 15) {
+          this.exploded = true;
+          // 폭발 효과 및 크레이터(바다) 형성
+          const centerTileX = Math.floor(this.targetX / TILE_SIZE);
+          const centerTileY = Math.floor(this.targetY / TILE_SIZE);
+
+          for (let tx = centerTileX - 3; tx <= centerTileX + 3; tx++) {
+            for (let ty = centerTileY - 3; ty <= centerTileY + 3; ty++) {
+              if (tx >= 0 && tx < COLS && ty >= 0 && ty < ROWS) {
+                if (Math.hypot(tx - centerTileX, ty - centerTileY) <= 3) {
+                  grid[tx][ty] = TILE.WATER;
+                }
+              }
+            }
+          }
+
+          // 파괴
+          humans = humans.filter(h => Math.hypot(h.x - this.targetX, h.y - this.targetY) > 90);
+          zombies = zombies.filter(z => Math.hypot(z.x - this.targetX, z.y - this.targetY) > 90);
+          buildings = buildings.filter(b => Math.hypot(b.x - this.targetX, b.y - this.targetY) > 100);
+          trees = trees.filter(t => Math.hypot(t.x - this.targetX, t.y - this.targetY) > 100);
+
+          effects.push({ type: 'explosion', x: this.targetX, y: this.targetY, radius: 90, life: 25 });
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // 터치 변환 알고리즘
+    function getTransformedPoint(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (clientX - rect.left - offsetX) / scale,
+        y: (clientY - rect.top - offsetY) / scale
+      };
+    }
+
+    // 갓 파워 적용
+    function applyGodPower(pt) {
+      if (pt.x < 0 || pt.x > WORLD_WIDTH || pt.y < 0 || pt.y > WORLD_HEIGHT) return;
+
+      const tx = Math.floor(pt.x / TILE_SIZE);
+      const ty = Math.floor(pt.y / TILE_SIZE);
+
+      if (currentTool === 'red') {
+        humans.push(new Human(pt.x, pt.y, 'red'));
+      } else if (currentTool === 'blue') {
+        humans.push(new Human(pt.x, pt.y, 'blue'));
+      } else if (currentTool === 'tree') {
+        trees.push({ x: pt.x + (Math.random()*16-8), y: pt.y + (Math.random()*16-8) });
+      } else if (currentTool === 'land' || currentTool === 'water' || currentTool === 'mountain') {
+        const typeMap = { 'land': TILE.LAND, 'water': TILE.WATER, 'mountain': TILE.MOUNTAIN };
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            if (tx+dx >= 0 && tx+dx < COLS && ty+dy >= 0 && ty+dy < ROWS) {
+              grid[tx+dx][ty+dy] = typeMap[currentTool];
+            }
+          }
+        }
+      } else if (currentTool === 'zombie') {
+        zombies.push(new Zombie(pt.x, pt.y));
+      } else if (currentTool === 'meteor') {
+        meteors.push(new Meteor(pt.x, pt.y));
+      } else if (currentTool === 'heal') {
+        effects.push({ type: 'heal', x: pt.x, y: pt.y, radius: 70, life: 20 });
+        for (let h of humans) {
+          if (Math.hypot(h.x - pt.x, h.y - pt.y) < 70) h.hp = h.maxHp;
+        }
+      }
+    }
+
+    // 터치 및 멀티터치 조작 핸들러
     let isTouchActive = false;
     let lastX = 0, lastY = 0;
     let initialTouchDist = 0;
@@ -354,15 +550,12 @@
         isTouchActive = true;
         lastX = e.touches[0].clientX;
         lastY = e.touches[0].clientY;
-
         if (currentTool !== null) {
-          const pt = getTransformedPoint(lastX, lastY);
-          applyGodPower(pt);
+          applyGodPower(getTransformedPoint(lastX, lastY));
         }
       } else if (e.touches.length === 2) {
         isTouchActive = false;
-        const t1 = e.touches[0];
-        const t2 = e.touches[1];
+        const t1 = e.touches[0], t2 = e.touches[1];
         initialTouchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
         lastMidX = (t1.clientX + t2.clientX) / 2;
         lastMidY = (t1.clientY + t2.clientY) / 2;
@@ -377,22 +570,17 @@
         const dy = touch.clientY - lastY;
 
         if (currentTool === null) {
-          // 도구가 선택 안 된 상태일 때는 1손가락 드래그가 곧 화면 이동
           offsetX += dx;
           offsetY += dy;
         } else {
-          // 도구 사용 중 드래그
-          const pt = getTransformedPoint(touch.clientX, touch.clientY);
-          if (Math.hypot(dx, dy) > 15) {
-            applyGodPower(pt);
+          if (Math.hypot(dx, dy) > 12) {
+            applyGodPower(getTransformedPoint(touch.clientX, touch.clientY));
           }
         }
         lastX = touch.clientX;
         lastY = touch.clientY;
       } else if (e.touches.length === 2) {
-        // 두 손가락 핀치 줌 & 시점 이동
-        const t1 = e.touches[0];
-        const t2 = e.touches[1];
+        const t1 = e.touches[0], t2 = e.touches[1];
         const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
         const midX = (t1.clientX + t2.clientX) / 2;
         const midY = (t1.clientY + t2.clientY) / 2;
@@ -403,7 +591,7 @@
           const zoomX = midX - rect.left;
           const zoomY = midY - rect.top;
 
-          const newScale = Math.min(Math.max(scale * factor, 0.2), 2.5);
+          const newScale = Math.min(Math.max(scale * factor, 0.15), 2.5);
           offsetX = zoomX - (zoomX - offsetX) * (newScale / scale);
           offsetY = zoomY - (zoomY - offsetY) * (newScale / scale);
           scale = newScale;
@@ -423,60 +611,25 @@
       if (e.touches.length === 0) isTouchActive = false;
     });
 
-    // 마우스 지원 (PC 환경 테스트용)
-    let isMouseDown = false;
-    canvas.addEventListener('mousedown', (e) => {
-      isMouseDown = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
-
-      if (currentTool !== null) {
-        const pt = getTransformedPoint(e.clientX, e.clientY);
-        applyGodPower(pt);
-      }
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-      if (!isMouseDown) return;
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
-
-      if (currentTool === null) {
-        offsetX += dx;
-        offsetY += dy;
-      } else {
-        const pt = getTransformedPoint(e.clientX, e.clientY);
-        if (Math.hypot(dx, dy) > 15) {
-          applyGodPower(pt);
-        }
-      }
-      lastX = e.clientX;
-      lastY = e.clientY;
-    });
-
-    window.addEventListener('mouseup', () => isMouseDown = false);
-
-    // 카메라 조작 관련
+    // 카메라 및 툴바
     function zoom(factor) {
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
-      const newScale = Math.min(Math.max(scale * factor, 0.2), 2.5);
-      
+      const newScale = Math.min(Math.max(scale * factor, 0.15), 2.5);
       offsetX = centerX - (centerX - offsetX) * (newScale / scale);
       offsetY = centerY - (centerY - offsetY) * (newScale / scale);
       scale = newScale;
     }
 
     function resetCamera() {
-      scale = 0.5;
+      scale = 0.4;
       offsetX = (canvas.width - WORLD_WIDTH * scale) / 2;
       offsetY = (canvas.height - WORLD_HEIGHT * scale) / 2;
     }
 
-    // 도구 선택 / 토글 함수 (동일한 버튼 재클릭 시 시점 이동 모드로 전환)
     function selectTool(toolName) {
       if (currentTool === toolName) {
-        currentTool = null; // 도구 해제 -> 1손가락 이동 모드로 자동 전환
+        currentTool = null;
         document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
       } else {
         currentTool = toolName;
@@ -485,53 +638,97 @@
       }
     }
 
-    function init() {
-      humans = [];
-      foods = [];
-      resetCamera();
+    function setSpeed(spd) {
+      gameSpeed = spd;
+      document.querySelectorAll('.speed-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`spd-${spd}`).classList.add('active');
+    }
 
-      for (let i = 0; i < 30; i++) {
-        humans.push(new Human(WORLD_WIDTH / 2 + (Math.random()*300-150), WORLD_HEIGHT / 2 + (Math.random()*300-150)));
+    // 초기화 (섬 2개 및 초기 마을 생성)
+    function init() {
+      resetCamera();
+      
+      // 바다로 둘러싸인 세계 생성
+      for (let x = 0; x < COLS; x++) {
+        for (let y = 0; y < ROWS; y++) {
+          if (x < 5 || x > COLS-6 || y < 5 || y > ROWS-6) {
+            grid[x][y] = TILE.WATER;
+          }
+        }
       }
-      for (let i = 0; i < 60; i++) {
-        foods.push({ x: WORLD_WIDTH / 2 + (Math.random()*500-250), y: WORLD_HEIGHT / 2 + (Math.random()*500-250) });
+
+      // 초기 사람 및 나무 배치
+      for (let i = 0; i < 15; i++) {
+        humans.push(new Human(WORLD_WIDTH * 0.35 + (Math.random()*100-50), WORLD_HEIGHT * 0.5 + (Math.random()*100-50), 'red'));
+        humans.push(new Human(WORLD_WIDTH * 0.65 + (Math.random()*100-50), WORLD_HEIGHT * 0.5 + (Math.random()*100-50), 'blue'));
+      }
+
+      for (let i = 0; i < 80; i++) {
+        trees.push({ x: Math.random() * (WORLD_WIDTH - 200) + 100, y: Math.random() * (WORLD_HEIGHT - 200) + 100 });
       }
     }
 
+    // 메인 게임 루프
     function loop() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // 시간 배속 적용
+      for (let step = 0; step < gameSpeed; step++) {
+        // 엔티티 업데이트
+        humans = humans.filter(h => h.hp > 0);
+        for (let h of humans) h.update();
 
+        zombies = zombies.filter(z => z.hp > 0);
+        for (let z of zombies) z.update();
+
+        for (let i = meteors.length - 1; i >= 0; i--) {
+          meteors[i].update();
+          if (meteors[i].exploded) meteors.splice(i, 1);
+        }
+
+        // 나무 자연 자라기
+        if (Math.random() < 0.03 && trees.length < 150) {
+          trees.push({ x: Math.random() * (WORLD_WIDTH - 100) + 50, y: Math.random() * (WORLD_HEIGHT - 100) + 50 });
+        }
+      }
+
+      // 렌더링
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
       ctx.translate(offsetX, offsetY);
       ctx.scale(scale, scale);
 
-      ctx.fillStyle = '#2b3925';
-      ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-
-      ctx.strokeStyle = '#232e1e';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-
-      if (Math.random() < 0.2) {
-        foods.push({ x: Math.random() * (WORLD_WIDTH - 100) + 50, y: Math.random() * (WORLD_HEIGHT - 100) + 50 });
+      // 1. 지형 렌더링
+      for (let x = 0; x < COLS; x++) {
+        for (let y = 0; y < ROWS; y++) {
+          const type = grid[x][y];
+          ctx.fillStyle = type === TILE.WATER ? '#1d4ed8' : (type === TILE.LAND ? '#2d4a1d' : '#4b5563');
+          ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
       }
 
-      ctx.fillStyle = '#ef4444';
-      for (let f of foods) {
+      // 2. 나무 렌더링
+      for (let t of trees) {
+        ctx.fillStyle = '#15803d';
         ctx.beginPath();
-        ctx.arc(f.x, f.y, 4, 0, Math.PI * 2);
+        ctx.arc(t.x, t.y, 6, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#22c55e';
-        ctx.fillRect(f.x - 1, f.y - 6, 2, 2);
-        ctx.fillStyle = '#ef4444';
       }
 
-      humans = humans.filter(h => h.hp > 0);
-      for (let h of humans) {
-        h.update();
-        h.draw();
+      // 3. 건물(집) 렌더링
+      for (let b of buildings) {
+        ctx.fillStyle = b.faction === 'red' ? '#991b1b' : '#1e40af';
+        ctx.fillRect(b.x - 10, b.y - 10, 20, 20);
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(b.x - 3, b.y - 3, 6, 6);
       }
 
+      // 4. 주민 & 좀비 렌더링
+      for (let h of humans) h.draw();
+      for (let z of zombies) z.draw();
+
+      // 5. 운석 렌더링
+      for (let m of meteors) m.draw();
+
+      // 6. 이펙트 (폭발, 치유)
       for (let i = effects.length - 1; i >= 0; i--) {
         let eff = effects[i];
         eff.life--;
@@ -540,21 +737,21 @@
         if (eff.type === 'heal') {
           ctx.fillStyle = `rgba(74, 222, 128, ${eff.life / 20 * 0.4})`;
           ctx.fill();
-        } else if (eff.type === 'lightning') {
-          ctx.fillStyle = `rgba(255, 255, 255, ${eff.life / 10 * 0.8})`;
+        } else if (eff.type === 'explosion') {
+          ctx.fillStyle = `rgba(239, 68, 68, ${eff.life / 25 * 0.6})`;
           ctx.fill();
-          ctx.strokeStyle = '#facc15';
-          ctx.lineWidth = 4;
-          ctx.stroke();
         }
         if (eff.life <= 0) effects.splice(i, 1);
       }
 
       ctx.restore();
 
-      document.getElementById('popCount').innerText = humans.length;
-      document.getElementById('foodCount').innerText = foods.length;
-      document.getElementById('maxGen').innerText = maxGeneration;
+      // 통계 UI 업데이트
+      const redCount = humans.filter(h => h.faction === 'red').length;
+      const blueCount = humans.filter(h => h.faction === 'blue').length;
+      document.getElementById('redCount').innerText = redCount;
+      document.getElementById('blueCount').innerText = blueCount;
+      document.getElementById('zombieCount').innerText = zombies.length;
 
       requestAnimationFrame(loop);
     }
