@@ -99,7 +99,7 @@
     .zoom-controls {
       position: absolute;
       right: 12px;
-      bottom: 90px;
+      bottom: 110px;
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -120,16 +120,48 @@
       box-shadow: 0 4px 6px rgba(0,0,0,0.4);
     }
 
-    /* 하단 스크롤형 갓 파워 툴바 */
-    .toolbar-wrapper {
-      height: 72px;
+    /* 하단 2단 컨트롤 구조 (카테고리 + 슬라이드 툴바) */
+    .control-panel {
       background: #16161a;
       border-top: 2px solid #33333d;
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+    }
+
+    /* 카테고리 선택 탭 */
+    .category-tabs {
+      display: flex;
+      background: #0d0d10;
+      border-bottom: 1px solid #2a2a32;
+    }
+
+    .cat-btn {
+      flex: 1;
+      padding: 6px 0;
+      background: transparent;
+      border: none;
+      color: #888;
+      font-size: 0.75rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .cat-btn.active {
+      color: #60a5fa;
+      background: #16161a;
+      border-bottom: 2px solid #3b82f6;
+    }
+
+    /* 하단 슬라이드형 갓 파워 툴바 */
+    .toolbar-wrapper {
+      height: 64px;
       overflow-x: auto;
       overflow-y: hidden;
       white-space: nowrap;
-      padding: 8px;
-      z-index: 10;
+      padding: 6px 10px;
+      -webkit-overflow-scrolling: touch;
     }
     .toolbar-wrapper::-webkit-scrollbar { display: none; }
 
@@ -139,13 +171,13 @@
     }
 
     .tool-btn {
-      width: 64px;
-      height: 52px;
+      width: 60px;
+      height: 48px;
       background: #25252e;
       border: 2px solid #3f3f4d;
       border-radius: 8px;
       color: #ccc;
-      display: flex;
+      display: inline-flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
@@ -191,36 +223,49 @@
     </div>
   </div>
 
-  <!-- 하단 멀티 카테고리 툴바 (선택한 도구 다시 누르면 시점 이동 모드) -->
-  <div class="toolbar-wrapper">
-    <div class="toolbar">
-      <button class="tool-btn active" id="tool-red" onclick="selectTool('red')">
-        <span>🔴</span>레드국
-      </button>
-      <button class="tool-btn" id="tool-blue" onclick="selectTool('blue')">
-        <span>🔵</span>블루국
-      </button>
-      <button class="tool-btn" id="tool-tree" onclick="selectTool('tree')">
-        <span>🌲</span>나무 심기
-      </button>
-      <button class="tool-btn" id="tool-land" onclick="selectTool('land')">
-        <span>🌱</span>땅 생성
-      </button>
-      <button class="tool-btn" id="tool-water" onclick="selectTool('water')">
-        <span>🌊</span>바다 생성
-      </button>
-      <button class="tool-btn" id="tool-mountain" onclick="selectTool('mountain')">
-        <span>⛰️</span>산 생성
-      </button>
-      <button class="tool-btn" id="tool-zombie" onclick="selectTool('zombie')">
-        <span>🧟</span>좀비 감염
-      </button>
-      <button class="tool-btn" id="tool-meteor" onclick="selectTool('meteor')">
-        <span>☄️</span>운석 투하
-      </button>
-      <button class="tool-btn" id="tool-heal" onclick="selectTool('heal')">
-        <span>💖</span>치유의 비
-      </button>
+  <!-- 하단 컨트롤 패널 (카테고리 탭 + 가로 슬라이드 툴바) -->
+  <div class="control-panel">
+    <div class="category-tabs">
+      <button class="cat-btn active" id="cat-life" onclick="switchCategory('life')">👥 생물/문명</button>
+      <button class="cat-btn" id="cat-terrain" onclick="switchCategory('terrain')">🌍 지형/자연</button>
+      <button class="cat-btn" id="cat-power" onclick="switchCategory('power')">⚡ 재앙/신벌</button>
+    </div>
+
+    <div class="toolbar-wrapper">
+      <div class="toolbar">
+        <!-- 생물 / 문명 카테고리 -->
+        <button class="tool-btn active" data-category="life" id="tool-red" onclick="selectTool('red')">
+          <span>🔴</span>레드국
+        </button>
+        <button class="tool-btn" data-category="life" id="tool-blue" onclick="selectTool('blue')">
+          <span>🔵</span>블루국
+        </button>
+        <button class="tool-btn" data-category="life" id="tool-zombie" onclick="selectTool('zombie')">
+          <span>🧟</span>좀비
+        </button>
+
+        <!-- 지형 / 자연 카테고리 -->
+        <button class="tool-btn" data-category="terrain" id="tool-land" onclick="selectTool('land')" style="display:none;">
+          <span>🌱</span>땅 생성
+        </button>
+        <button class="tool-btn" data-category="terrain" id="tool-water" onclick="selectTool('water')" style="display:none;">
+          <span>🌊</span>바다 생성
+        </button>
+        <button class="tool-btn" data-category="terrain" id="tool-mountain" onclick="selectTool('mountain')" style="display:none;">
+          <span>⛰️</span>산 생성
+        </button>
+        <button class="tool-btn" data-category="terrain" id="tool-tree" onclick="selectTool('tree')" style="display:none;">
+          <span>🌲</span>나무 심기
+        </button>
+
+        <!-- 재앙 / 신벌 카테고리 -->
+        <button class="tool-btn" data-category="power" id="tool-meteor" onclick="selectTool('meteor')" style="display:none;">
+          <span>☄️</span>운석 투하
+        </button>
+        <button class="tool-btn" data-category="power" id="tool-heal" onclick="selectTool('heal')" style="display:none;">
+          <span>💖</span>치유의 비
+        </button>
+      </div>
     </div>
   </div>
 
@@ -262,12 +307,12 @@
     let meteors = [];
     let effects = [];
 
-    // 사람 클래스 (레드/블루 왕국, 전투, 채집, 건물 건설 지원)
+    // 사람 클래스
     class Human {
       constructor(x, y, faction) {
         this.x = x;
         this.y = y;
-        this.faction = faction; // 'red' or 'blue'
+        this.faction = faction;
         this.hp = 100;
         this.maxHp = 100;
         this.wood = 0;
@@ -278,7 +323,6 @@
       }
 
       update() {
-        // 산이나 바다에서는 속도 감소
         const tileX = Math.floor(this.x / TILE_SIZE);
         const tileY = Math.floor(this.y / TILE_SIZE);
         let speedMult = 1;
@@ -287,17 +331,14 @@
           if (grid[tileX][tileY] === TILE.MOUNTAIN) speedMult = 0.5;
         }
 
-        // 1. 좀비나 적 왕국 감지 및 공격 (전쟁)
         let target = null;
         let minDist = 120;
 
-        // 좀비 최우선 공격/도망
         for (let z of zombies) {
           let d = Math.hypot(z.x - this.x, z.y - this.y);
           if (d < minDist) { minDist = d; target = z; }
         }
 
-        // 적 왕국 감지
         if (!target) {
           for (let h of humans) {
             if (h.faction !== this.faction) {
@@ -313,10 +354,9 @@
           this.vy = Math.sin(angle) * this.speed * speedMult;
 
           if (minDist < 10) {
-            target.hp -= 1.5; // 전투 수행
+            target.hp -= 1.5;
           }
         } else {
-          // 2. 근처 나무 채집 및 마을 건설
           let nearestTree = null;
           let treeDist = 150;
           for (let t of trees) {
@@ -334,11 +374,9 @@
               trees = trees.filter(t => t !== nearestTree);
             }
           } else if (this.wood >= 5) {
-            // 목재 5개 모으면 집 건설
             buildings.push({ x: this.x, y: this.y, faction: this.faction, hp: 150 });
             this.wood = 0;
           } else {
-            // 자유 배회
             this.walkTimer--;
             if (this.walkTimer <= 0) {
               const angle = Math.random() * Math.PI * 2;
@@ -352,11 +390,9 @@
         this.x += this.vx;
         this.y += this.vy;
 
-        // 경계 제한
         this.x = Math.max(10, Math.min(WORLD_WIDTH - 10, this.x));
         this.y = Math.max(10, Math.min(WORLD_HEIGHT - 10, this.y));
 
-        // 건물 부근에서 번식 및 체력 회복
         for (let b of buildings) {
           if (b.faction === this.faction && Math.hypot(b.x - this.x, b.y - this.y) < 40) {
             this.hp = Math.min(this.maxHp, this.hp + 0.1);
@@ -371,7 +407,6 @@
         ctx.save();
         ctx.translate(this.x, this.y);
 
-        // 피부 및 진영별 옷
         ctx.fillStyle = '#ffdbac';
         ctx.fillRect(-3, -10, 6, 5);
 
@@ -418,7 +453,6 @@
 
           if (minDist < 10) {
             target.hp -= 3;
-            // 사람이 죽으면 좀비로 전환
             if (target.hp <= 0) {
               zombies.push(new Zombie(target.x, target.y));
             }
@@ -432,7 +466,7 @@
       draw() {
         ctx.save();
         ctx.translate(this.x, this.y);
-        ctx.fillStyle = '#4ade80'; // 녹색 피부
+        ctx.fillStyle = '#4ade80';
         ctx.fillRect(-3, -10, 6, 5);
         ctx.fillStyle = '#374151';
         ctx.fillRect(-4, -5, 8, 7);
@@ -443,7 +477,7 @@
       }
     }
 
-    // 운석 재앙 클래스
+    // 운석 클래스
     class Meteor {
       constructor(targetX, targetY) {
         this.x = targetX + 200;
@@ -461,7 +495,6 @@
 
         if (Math.hypot(this.targetX - this.x, this.targetY - this.y) < 15) {
           this.exploded = true;
-          // 폭발 효과 및 크레이터(바다) 형성
           const centerTileX = Math.floor(this.targetX / TILE_SIZE);
           const centerTileY = Math.floor(this.targetY / TILE_SIZE);
 
@@ -475,7 +508,6 @@
             }
           }
 
-          // 파괴
           humans = humans.filter(h => Math.hypot(h.x - this.targetX, h.y - this.targetY) > 90);
           zombies = zombies.filter(z => Math.hypot(z.x - this.targetX, z.y - this.targetY) > 90);
           buildings = buildings.filter(b => Math.hypot(b.x - this.targetX, b.y - this.targetY) > 100);
@@ -495,7 +527,6 @@
       }
     }
 
-    // 터치 변환 알고리즘
     function getTransformedPoint(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
       return {
@@ -504,7 +535,6 @@
       };
     }
 
-    // 갓 파워 적용
     function applyGodPower(pt) {
       if (pt.x < 0 || pt.x > WORLD_WIDTH || pt.y < 0 || pt.y > WORLD_HEIGHT) return;
 
@@ -538,7 +568,6 @@
       }
     }
 
-    // 터치 및 멀티터치 조작 핸들러
     let isTouchActive = false;
     let lastX = 0, lastY = 0;
     let initialTouchDist = 0;
@@ -611,7 +640,6 @@
       if (e.touches.length === 0) isTouchActive = false;
     });
 
-    // 카메라 및 툴바
     function zoom(factor) {
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
@@ -627,6 +655,21 @@
       offsetY = (canvas.height - WORLD_HEIGHT * scale) / 2;
     }
 
+    // 카테고리 전환 함수
+    function switchCategory(catName) {
+      document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`cat-${catName}`).classList.add('active');
+
+      document.querySelectorAll('.tool-btn').forEach(btn => {
+        if (btn.dataset.category === catName) {
+          btn.style.display = 'inline-flex';
+        } else {
+          btn.style.display = 'none';
+        }
+      });
+    }
+
+    // 도구 선택 / 토글 함수
     function selectTool(toolName) {
       if (currentTool === toolName) {
         currentTool = null;
@@ -644,11 +687,9 @@
       document.getElementById(`spd-${spd}`).classList.add('active');
     }
 
-    // 초기화 (섬 2개 및 초기 마을 생성)
     function init() {
       resetCamera();
       
-      // 바다로 둘러싸인 세계 생성
       for (let x = 0; x < COLS; x++) {
         for (let y = 0; y < ROWS; y++) {
           if (x < 5 || x > COLS-6 || y < 5 || y > ROWS-6) {
@@ -657,7 +698,6 @@
         }
       }
 
-      // 초기 사람 및 나무 배치
       for (let i = 0; i < 15; i++) {
         humans.push(new Human(WORLD_WIDTH * 0.35 + (Math.random()*100-50), WORLD_HEIGHT * 0.5 + (Math.random()*100-50), 'red'));
         humans.push(new Human(WORLD_WIDTH * 0.65 + (Math.random()*100-50), WORLD_HEIGHT * 0.5 + (Math.random()*100-50), 'blue'));
@@ -668,11 +708,8 @@
       }
     }
 
-    // 메인 게임 루프
     function loop() {
-      // 시간 배속 적용
       for (let step = 0; step < gameSpeed; step++) {
-        // 엔티티 업데이트
         humans = humans.filter(h => h.hp > 0);
         for (let h of humans) h.update();
 
@@ -684,19 +721,16 @@
           if (meteors[i].exploded) meteors.splice(i, 1);
         }
 
-        // 나무 자연 자라기
         if (Math.random() < 0.03 && trees.length < 150) {
           trees.push({ x: Math.random() * (WORLD_WIDTH - 100) + 50, y: Math.random() * (WORLD_HEIGHT - 100) + 50 });
         }
       }
 
-      // 렌더링
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
       ctx.translate(offsetX, offsetY);
       ctx.scale(scale, scale);
 
-      // 1. 지형 렌더링
       for (let x = 0; x < COLS; x++) {
         for (let y = 0; y < ROWS; y++) {
           const type = grid[x][y];
@@ -705,7 +739,6 @@
         }
       }
 
-      // 2. 나무 렌더링
       for (let t of trees) {
         ctx.fillStyle = '#15803d';
         ctx.beginPath();
@@ -713,7 +746,6 @@
         ctx.fill();
       }
 
-      // 3. 건물(집) 렌더링
       for (let b of buildings) {
         ctx.fillStyle = b.faction === 'red' ? '#991b1b' : '#1e40af';
         ctx.fillRect(b.x - 10, b.y - 10, 20, 20);
@@ -721,14 +753,11 @@
         ctx.fillRect(b.x - 3, b.y - 3, 6, 6);
       }
 
-      // 4. 주민 & 좀비 렌더링
       for (let h of humans) h.draw();
       for (let z of zombies) z.draw();
 
-      // 5. 운석 렌더링
       for (let m of meteors) m.draw();
 
-      // 6. 이펙트 (폭발, 치유)
       for (let i = effects.length - 1; i >= 0; i--) {
         let eff = effects[i];
         eff.life--;
@@ -746,7 +775,6 @@
 
       ctx.restore();
 
-      // 통계 UI 업데이트
       const redCount = humans.filter(h => h.faction === 'red').length;
       const blueCount = humans.filter(h => h.faction === 'blue').length;
       document.getElementById('redCount').innerText = redCount;
