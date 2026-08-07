@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4대 종족 시뮬레이션</title>
+    <title>4대 종족 시뮬레이션 - 자원 및 대장간 시스템</title>
     <style>
         body {
             margin: 0;
@@ -19,8 +19,9 @@
             background-color: #2b2b2b;
             margin-top: 10px;
         }
-        #stats {
+        #ui {
             margin-top: 10px;
+            font-size: 14px;
             display: flex;
             gap: 15px;
         }
@@ -28,202 +29,194 @@
 </head>
 <body>
 
-<div id="stats">
-    <div>인간: <span id="human-count">0</span></div>
-    <div>엘프: <span id="elf-count">0</span></div>
-    <div>오크: <span id="orc-count">0</span></div>
-    <div>드워프: <span id="dwarf-count">0</span></div>
+<div id="ui">
+    <div><b>초록:</b> 나무 | <b>회색:</b> 돌 | <b>슬레이트:</b> 철 | <b>주황:</b> 금 | <b>노랑:</b> 밭(식량)</div>
 </div>
-<canvas id="simCanvas" width="800" height="600"></canvas>
+<canvas id="simCanvas" width="900" height="650"></canvas>
 
 <script>
-// 1. 종족별 고유 스탯 및 특성(Trait) 정의
+// 1단계 종족 데이터 유지
 const RACE_DATA = {
-    human: {
-        name: 'Human',
-        color: '#3498db',
-        baseSpeed: 2.0,
-        baseHp: 100,
-        baseAtk: 10,
-        baseDef: 5,
-        reproduceRate: 0.003, // 높은 번식률
-        maxAge: 3000,
-        harvestMult: 1.0,
-        destroyTreeOnGather: true,
-        aggroRate: 0.2
-    },
-    elf: {
-        name: 'Elf',
-        color: '#2ecc71',
-        baseSpeed: 2.4, // 이동속도 +20%
-        baseHp: 90,
-        baseAtk: 12,
-        baseDef: 4,
-        reproduceRate: 0.001,
-        maxAge: 8000, // 긴 수명
-        harvestMult: 1.0,
-        destroyTreeOnGather: false, // 나무 채집 시 파괴하지 않음
-        aggroRate: 0.1
-    },
-    orc: {
-        name: 'Orc',
-        color: '#e74c3c',
-        baseSpeed: 2.0,
-        baseHp: 150, // 체력 +50
-        baseAtk: 22, // 높은 공격력
-        baseDef: 3,
-        reproduceRate: 0.0015,
-        maxAge: 2500,
-        harvestMult: 1.0,
-        destroyTreeOnGather: true,
-        aggroRate: 0.8 // 타 종족 공격성 높음
-    },
-    dwarf: {
-        name: 'Dwarf',
-        color: '#f39c12',
-        baseSpeed: 1.8, // 이동속도 -10%
-        baseHp: 130, // 높은 체력
-        baseAtk: 14,
-        baseDef: 12, // 높은 방어력
-        reproduceRate: 0.001,
-        maxAge: 4500,
-        harvestMult: 2.0, // 채집 효율 2배
-        destroyTreeOnGather: true,
-        aggroRate: 0.3
-    }
+    human: { name: 'Human', color: '#3498db', baseSpeed: 2.0, baseHp: 100, baseAtk: 10, baseDef: 5, reproduceRate: 0.003, maxAge: 3000, harvestMult: 1.0, destroyTreeOnGather: true },
+    elf:   { name: 'Elf',   color: '#2ecc71', baseSpeed: 2.4, baseHp: 90,  baseAtk: 12, baseDef: 4, reproduceRate: 0.001, maxAge: 8000, harvestMult: 1.0, destroyTreeOnGather: false },
+    orc:   { name: 'Orc',   color: '#e74c3c', baseSpeed: 2.0, baseHp: 150, baseAtk: 22, baseDef: 3, reproduceRate: 0.0015, maxAge: 2500, harvestMult: 1.0, destroyTreeOnGather: true },
+    dwarf: { name: 'Dwarf', color: '#f39c12', baseSpeed: 1.8, baseHp: 130, baseAtk: 14, baseDef: 12, reproduceRate: 0.001, maxAge: 4500, harvestMult: 2.0, destroyTreeOnGather: true }
 };
 
-// 2. 자원 클래스 (나무)
+// 1. 자원 확장 (trees, mines: stone/iron/gold, crops: food)
 class Resource {
-    constructor(x, y, type = 'tree') {
+    constructor(x, y, type) {
         this.x = x;
         this.y = y;
-        this.type = type;
+        this.type = type; // 'tree', 'stone', 'iron', 'gold', 'crop'
         this.amount = 100;
         this.isDestroyed = false;
     }
 
     draw(ctx) {
         if (this.isDestroyed) return;
-        ctx.fillStyle = '#27ae60';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 8, 0, Math.PI * 2);
-        ctx.fill();
+        if (this.type === 'tree') {
+            ctx.fillStyle = '#27ae60';
+            ctx.arc(this.x, this.y, 7, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (this.type === 'crop') {
+            ctx.fillStyle = '#f1c40f';
+            ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // 광산 노드 (돌, 철, 금)
+            ctx.fillStyle = this.type === 'stone' ? '#95a5a6' : (this.type === 'iron' ? '#7f8c8d' : '#e67e22');
+            ctx.fillRect(this.x - 6, this.y - 6, 12, 12);
+        }
     }
 }
 
-// 3. Citizen(시민) 클래스 확장
+// 2 & 3. 마을 클래스: 창고, 건물 분화(Forge, Windmill), 장비 제작
+class Village {
+    constructor(x, y, race) {
+        this.x = x;
+        this.y = y;
+        this.race = race;
+        // 마을 자원 창고
+        this.resources = { wood: 0, stone: 0, iron: 0, gold: 0, food: 0 };
+        this.buildings = []; // 'House', 'Forge', 'Windmill'
+        this.equipment = { weaponLevel: 0, armorLevel: 0 }; // 무기/갑옷 강화 단계
+    }
+
+    // 건물 건설 및 장비 제작 업데이트
+    update() {
+        // 풍차 건설 (목재 40, 석재 20)
+        if (!this.buildings.includes('Windmill') && this.resources.wood >= 40 && this.resources.stone >= 20) {
+            this.resources.wood -= 40;
+            this.resources.stone -= 20;
+            this.buildings.push('Windmill');
+        }
+        // 대장간 건설 (목재 50, 석재 50)
+        if (!this.buildings.includes('Forge') && this.resources.wood >= 50 && this.resources.stone >= 50) {
+            this.resources.wood -= 50;
+            this.resources.stone -= 50;
+            this.buildings.push('Forge');
+        }
+        // 일반 집 건설 (목재 30)
+        if (this.resources.wood >= 30) {
+            this.resources.wood -= 30;
+            this.buildings.push('House');
+        }
+
+        // 4. 대장간 존재 시 장비 제작
+        if (this.buildings.includes('Forge')) {
+            // 철 소모 -> 무기 제작 (공격력 증가)
+            if (this.resources.iron >= 25) {
+                this.resources.iron -= 25;
+                this.equipment.weaponLevel += 1;
+            }
+            // 금 소모 -> 갑옷 제작 (방어력 증가)
+            if (this.resources.gold >= 25) {
+                this.resources.gold -= 25;
+                this.equipment.armorLevel += 1;
+            }
+        }
+    }
+
+    draw(ctx) {
+        // 마을 회관
+        ctx.fillStyle = RACE_DATA[this.race].color;
+        ctx.fillRect(this.x - 14, this.y - 14, 28, 28);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.x - 14, this.y - 14, 28, 28);
+        ctx.lineWidth = 1;
+
+        // 건설된 건물 오프셋 표시
+        this.buildings.forEach((b, i) => {
+            const bx = this.x + Math.cos(i) * 32;
+            const by = this.y + Math.sin(i) * 32;
+            ctx.fillStyle = b === 'Forge' ? '#e74c3c' : (b === 'Windmill' ? '#f39c12' : '#bdc3c7');
+            ctx.fillRect(bx - 5, by - 5, 10, 10);
+        });
+    }
+}
+
+// 주민 클래스
 class Citizen {
-    constructor(x, y, raceType = 'human') {
+    constructor(x, y, raceType, village) {
         this.x = x;
         this.y = y;
         this.race = raceType;
-        
-        // 종족 스탯적용
-        const traits = RACE_DATA[this.race] || RACE_DATA['human'];
-        this.traits = traits;
-        
-        this.speed = traits.baseSpeed;
-        this.maxHp = traits.baseHp;
-        this.hp = traits.baseHp;
-        this.atk = traits.baseAtk;
-        this.def = traits.baseDef;
+        this.village = village;
+        this.traits = RACE_DATA[this.race];
+
+        this.speed = this.traits.baseSpeed;
+        this.maxHp = this.traits.baseHp;
+        this.hp = this.traits.baseHp;
         this.age = 0;
-        this.inventory = 0;
-
-        // 목표 지점 및 상태
-        this.target = null;
-        this.state = 'idle'; // 'idle', 'gathering', 'combat'
+        this.carriedResource = null;
     }
 
-    // 채집 로직
-    gather(resource) {
-        if (!resource || resource.isDestroyed) return;
-
-        const distance = Math.hypot(resource.x - this.x, resource.y - this.y);
-        if (distance < 10) {
-            // 드워프 등 채집 효율 반영
-            const gatherAmount = 5 * this.traits.harvestMult;
-            this.inventory += gatherAmount;
-            resource.amount -= gatherAmount;
-
-            // 엘프 특성: 나무 채집 시 자원이 고갈되어도 나무를 파괴하지 않음
-            if (resource.amount <= 0) {
-                if (this.traits.destroyTreeOnGather) {
-                    resource.isDestroyed = true;
-                } else {
-                    resource.amount = 100; // 엘시는 자원 지속 재생
-                }
-            }
-        } else {
-            this.moveTo(resource.x, resource.y);
-        }
+    // 대장간 장비 제작 결과에 따른 스탯 자동 반영
+    get atk() {
+        const bonus = this.village ? this.village.equipment.weaponLevel * 6 : 0;
+        return this.traits.baseAtk + bonus;
     }
 
-    // 전투 로직 (오크 특성 연동)
-    attack(target) {
-        if (!target || target.hp <= 0) return;
-
-        const distance = Math.hypot(target.x - this.x, target.y - this.y);
-        if (distance < 12) {
-            const damage = Math.max(1, this.atk - target.def);
-            target.hp -= damage;
-        } else {
-            this.moveTo(target.x, target.y);
-        }
+    get def() {
+        const bonus = this.village ? this.village.equipment.armorLevel * 4 : 0;
+        return this.traits.baseDef + bonus;
     }
 
-    // 번식 로직 (인간 높은 번식률 반영)
-    tryReproduce(citizens) {
-        if (Math.random() < this.traits.reproduceRate && this.inventory >= 20) {
-            this.inventory -= 20;
-            citizens.push(new Citizen(this.x + (Math.random() * 20 - 10), this.y + (Math.random() * 20 - 10), this.race));
-        }
-    }
-
-    // 이동 감지
     moveTo(tx, ty) {
-        const dx = tx - this.x;
-        const dy = ty - this.y;
+        const dx = tx - this.x, dy = ty - this.y;
         const dist = Math.hypot(dx, dy);
-
-        if (dist > 1) {
+        if (dist > 2) {
             this.x += (dx / dist) * this.speed;
             this.y += (dy / dist) * this.speed;
         }
     }
 
-    // 상태 업데이트
     update(citizens, resources) {
         this.age++;
+        if (this.age > this.traits.maxAge || this.hp <= 0) return false;
 
-        // 수명 만료 및 체력 고갈 사망
-        if (this.age > this.traits.maxAge || this.hp <= 0) {
-            return false;
-        }
-
-        // 1. 타 종족 탐색 및 선제 공격 (공격성이 높은 종족 우선)
-        let enemy = null;
-        if (Math.random() < this.traits.aggroRate) {
-            enemy = citizens.find(other => other !== this && other.race !== this.race && Math.hypot(other.x - this.x, other.y - this.y) < 100);
-        }
-
-        if (enemy) {
-            this.state = 'combat';
-            this.attack(enemy);
-        } else {
-            // 2. 자원 채집
-            const targetResource = resources.find(r => !r.isDestroyed);
-            if (targetResource) {
-                this.state = 'gathering';
-                this.gather(targetResource);
+        // 자원 보유 시 마을 창고로 운반
+        if (this.carriedResource && this.village) {
+            const dist = Math.hypot(this.village.x - this.x, this.village.y - this.y);
+            if (dist < 15) {
+                const map = { tree: 'wood', stone: 'stone', iron: 'iron', gold: 'gold', crop: 'food' };
+                this.village.resources[map[this.carriedResource.type]] += this.carriedResource.amount;
+                this.carriedResource = null;
             } else {
-                this.state = 'idle';
+                this.moveTo(this.village.x, this.village.y);
+            }
+            return true;
+        }
+
+        // 자원 채집
+        const target = resources.find(r => !r.isDestroyed);
+        if (target) {
+            const dist = Math.hypot(target.x - this.x, target.y - this.y);
+            if (dist < 10) {
+                const amount = 10 * this.traits.harvestMult;
+                target.amount -= amount;
+                this.carriedResource = { type: target.type, amount: amount };
+
+                if (target.amount <= 0) {
+                    if (target.type === 'tree' && !this.traits.destroyTreeOnGather) {
+                        target.amount = 100; // 엘프 나무 보존
+                    } else {
+                        target.isDestroyed = true;
+                    }
+                }
+            } else {
+                this.moveTo(target.x, target.y);
             }
         }
 
-        // 3. 번식 체크
-        this.tryReproduce(citizens);
+        // 번식 (마을 식량 소비)
+        if (this.village && this.village.resources.food >= 20 && Math.random() < this.traits.reproduceRate) {
+            this.village.resources.food -= 20;
+            citizens.push(new Citizen(this.x, this.y, this.race, this.village));
+        }
 
         return true;
     }
@@ -231,68 +224,67 @@ class Citizen {
     draw(ctx) {
         ctx.fillStyle = this.traits.color;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
         ctx.fill();
 
-        // 체력바 표시
-        ctx.fillStyle = '#e74c3c';
-        ctx.fillRect(this.x - 8, this.y - 10, 16, 3);
-        ctx.fillStyle = '#2ecc71';
-        ctx.fillRect(this.x - 8, this.y - 10, (16 * (this.hp / this.maxHp)), 3);
+        // 장비 착용 시 외곽선 테두리 강조
+        if (this.village && (this.village.equipment.weaponLevel > 0 || this.village.equipment.armorLevel > 0)) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.lineWidth = 1;
+        }
     }
 }
 
-// 4. 시뮬레이션 환경 구축 및 루프
+// Environment Setup
 const canvas = document.getElementById('simCanvas');
 const ctx = canvas.getContext('2d');
 
+const villages = [];
 const citizens = [];
 const resources = [];
 
-// 초기 엔티티 생성
 function init() {
     const races = ['human', 'elf', 'orc', 'dwarf'];
     
-    // 각 종족별 5명씩 생성
-    races.forEach(race => {
-        for (let i = 0; i < 5; i++) {
-            citizens.push(new Citizen(Math.random() * canvas.width, Math.random() * canvas.height, race));
+    // 마을 및 주민 배치
+    races.forEach((race, i) => {
+        const vx = 200 + (i % 2) * 500;
+        const vy = 150 + Math.floor(i / 2) * 350;
+        const v = new Village(vx, vy, race);
+        villages.push(v);
+
+        for (let j = 0; j < 4; j++) {
+            citizens.push(new Citizen(vx + (Math.random() * 40 - 20), vy + (Math.random() * 40 - 20), race, v));
         }
     });
 
-    // 자원 10개 생성
-    for (let i = 0; i < 10; i++) {
-        resources.push(new Resource(Math.random() * canvas.width, Math.random() * canvas.height));
+    // 무작위 자원 노드 생성 (나무, 광산, 밭)
+    const types = ['tree', 'stone', 'iron', 'gold', 'crop'];
+    for (let i = 0; i < 45; i++) {
+        const type = types[Math.floor(Math.random() * types.length)];
+        resources.push(new Resource(Math.random() * (canvas.width - 100) + 50, Math.random() * (canvas.height - 100) + 50, type));
     }
-}
-
-function updateUI() {
-    const counts = { human: 0, elf: 0, orc: 0, dwarf: 0 };
-    citizens.forEach(c => counts[c.race]++);
-    
-    document.getElementById('human-count').innerText = counts.human;
-    document.getElementById('elf-count').innerText = counts.elf;
-    document.getElementById('orc-count').innerText = counts.orc;
-    document.getElementById('dwarf-count').innerText = counts.dwarf;
 }
 
 function loop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 자원 그리기
     resources.forEach(r => r.draw(ctx));
+    villages.forEach(v => {
+        v.update();
+        v.draw(ctx);
+    });
 
-    // 개체 업데이트 및 그리기
     for (let i = citizens.length - 1; i >= 0; i--) {
-        const alive = citizens[i].update(citizens, resources);
-        if (!alive) {
+        if (!citizens[i].update(citizens, resources)) {
             citizens.splice(i, 1);
         } else {
             citizens[i].draw(ctx);
         }
     }
 
-    updateUI();
     requestAnimationFrame(loop);
 }
 
