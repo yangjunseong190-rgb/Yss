@@ -1,0 +1,188 @@
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  // Mobile sizing (CSS pixels)
+  const cssWidth = Math.min(window.innerWidth - 24, 500);
+  const cssHeight = Math.floor(cssWidth * 1.2);
+
+  // Scale for devicePixelRatio to keep canvas crisp
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  canvas.style.width = cssWidth + 'px';
+  canvas.style.height = cssHeight + 'px';
+  canvas.width = Math.floor(cssWidth * dpr);
+  canvas.height = Math.floor(cssHeight * dpr);
+  ctx.scale(dpr, dpr);
+
+  const width = cssWidth;
+  const height = cssHeight;
+
+  let agents = [];
+  let foods = [];
+  let maxGeneration = 1;
+
+  const MAX_AGENTS = 300;
+  const INITIAL_POP = 12;
+
+  class Agent {
+    constructor(x, y, dna = null, generation = 1) {
+      this.x = x;
+      this.y = y;
+      this.energy = 100;
+      this.generation = generation;
+
+      if (dna) {
+        this.speed = Math.max(0.6, dna.speed + (Math.random() - 0.5) * 0.8);
+        this.sense = Math.max(15, dna.sense + (Math.random() - 0.5) * 10);
+      } else {
+        this.speed = 1.5 + Math.random();
+        this.sense = 30 + Math.random() * 30;
+      }
+
+      this.vx = (Math.random() - 0.5) * this.speed;
+      this.vy = (Math.random() - 0.5) * this.speed;
+    }
+
+    update() {
+      const cost = 0.05 + (this.speed * this.speed * 0.02) + (this.sense * 0.0005);
+      this.energy -= cost;
+
+      let closestFood = null;
+      let closestIndex = -1;
+      let minDist = Infinity;
+
+      for (let i = 0; i < foods.length; i++) {
+        const food = foods[i];
+        const dist = Math.hypot(food.x - this.x, food.y - this.y);
+        if (dist < this.sense && dist < minDist) {
+          minDist = dist;
+          closestFood = food;
+          closestIndex = i;
+        }
+      }
+
+      if (closestFood) {
+        const angle = Math.atan2(closestFood.y - this.y, closestFood.x - this.x);
+        this.vx = Math.cos(angle) * this.speed;
+        this.vy = Math.sin(angle) * this.speed;
+
+        if (minDist < 8 && closestIndex !== -1) {
+          this.energy += 40;
+          // remove the eaten food in-place
+          foods.splice(closestIndex, 1);
+        }
+      }
+
+      this.x += this.vx;
+      this.y += this.vy;
+
+      // bounce and clamp to canvas (use CSS pixel width/height)
+      if (this.x < 0) { this.x = 0; this.vx *= -1; }
+      if (this.x > width) { this.x = width; this.vx *= -1; }
+      if (this.y < 0) { this.y = 0; this.vy *= -1; }
+      if (this.y > height) { this.y = height; this.vy *= -1; }
+
+      // cap energy to avoid runaway floats
+      this.energy = Math.min(this.energy, 220);
+
+      // reproduction: only if under MAX_AGENTS
+      if (this.energy > 180 && agents.length < MAX_AGENTS) {
+        this.energy -= 90;
+        const nextGen = this.generation + 1;
+        if (nextGen > maxGeneration) maxGeneration = nextGen;
+        agents.push(new Agent(this.x, this.y, { speed: this.speed, sense: this.sense }, nextGen));
+      }
+    }
+
+    draw() {
+      // draw sense circle (very faint)
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.sense, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.02)';
+      ctx.fill();
+
+      // body
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
+      const r = Math.min(255, Math.floor(this.speed * 60));
+      const b = Math.min(255, Math.floor(this.sense * 3));
+      ctx.fillStyle = `rgb(${r},120,${b})`;
+      ctx.fill();
+    }
+  }
+
+  function handleTouch(e) {
+    const rect = canvas.getBoundingClientRect();
+    // handle touch and mouse: prefer changedTouches if present
+    const touch = (e.changedTouches && e.changedTouches[0]) || e.touches && e.touches[0] || e;
+    const x = (touch.clientX - rect.left);
+    const y = (touch.clientY - rect.top);
+    foods.push({ x, y });
+  }
+
+  // Add non-passive touch listener so preventDefault works
+  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleTouch(e); }, { passive: false });
+  canvas.addEventListener('click', handleTouch);
+
+  function addFood(count) {
+    for (let i = 0; i < count; i++) {
+      foods.push({
+        x: Math.random() * (width - 20) + 10,
+        y: Math.random() * (height - 20) + 10
+      });
+    }
+  }
+
+  function triggerDisaster() {
+    agents = agents.filter(() => Math.random() > 0.5);
+  }
+
+  function resetSim() {
+    agents = [];
+    foods = [];
+    maxGeneration = 1;
+    for (let i = 0; i < INITIAL_POP; i++) {
+      agents.push(new Agent(width / 2, height / 2));
+    }
+    addFood(30);
+  }
+
+  function updateStats() {
+    document.getElementById('popCount').innerText = agents.length;
+    document.getElementById('maxGen').innerText = maxGeneration;
+
+    if (agents.length > 0) {
+      const avgSpd = agents.reduce((a, b) => a + b.speed, 0) / agents.length;
+      const avgSns = agents.reduce((a, b) => a + b.sense, 0) / agents.length;
+      document.getElementById('avgSpeed').innerText = avgSpd.toFixed(2);
+      document.getElementById('avgSense').innerText = avgSns.toFixed(1);
+    } else {
+      document.getElementById('avgSpeed').innerText = '0';
+      document.getElementById('avgSense').innerText = '0';
+    }
+  }
+
+  function loop() {
+    // clear using CSS pixel dimensions
+    ctx.clearRect(0, 0, width, height);
+
+    if (Math.random() < 0.08) addFood(1);
+
+    ctx.fillStyle = '#4ade80';
+    for (let food of foods) {
+      ctx.fillRect(food.x - 3, food.y - 3, 6, 6);
+    }
+
+    agents = agents.filter(a => a.energy > 0);
+    for (let agent of agents) {
+      agent.update();
+      agent.draw();
+    }
+
+    updateStats();
+    requestAnimationFrame(loop);
+  }
+
+  resetSim();
+  loop();
+</script>
