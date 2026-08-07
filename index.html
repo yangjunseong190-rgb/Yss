@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#1a1a1a">
 
   <style>
-    /* iOS 꾹 누르기/선택/하이라이트 완전 차단 설정 */
+    /* iOS 꾹 누르기/선택/하이라이트 차단 */
     * { 
       box-sizing: border-box; 
       touch-action: none; 
@@ -72,7 +72,7 @@
       image-rendering: pixelated;
     }
 
-    /* 우측 줌 조작 버튼 */
+    /* 우측 보조 줌 버튼 */
     .zoom-controls {
       position: absolute;
       right: 12px;
@@ -99,21 +99,20 @@
     }
     .zoom-btn:active { background: #555560; transform: scale(0.95); }
 
-    /* 하단 툴바 */
+    /* 하단 툴바 (시점 이동 버튼 제거) */
     .toolbar {
       height: 64px;
       background: #1c1c20;
       border-top: 2px solid #3a3a40;
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
+      justify-content: space-around;
       padding: 0 10px;
       z-index: 10;
     }
     .tool-btn {
       flex: 1;
-      max-width: 75px;
+      max-width: 80px;
       height: 48px;
       background: #2a2a30;
       border: 2px solid #44444e;
@@ -126,12 +125,14 @@
       font-size: 0.65rem;
       gap: 2px;
       cursor: pointer;
+      transition: all 0.15s ease;
     }
     .tool-btn.active {
       background: #2563eb;
       border-color: #60a5fa;
       color: #fff;
       font-weight: bold;
+      box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
     }
     .tool-btn span { font-size: 1.1rem; }
   </style>
@@ -154,6 +155,7 @@
     </div>
   </div>
 
+  <!-- 하단 툴바: 선택된 도구를 한번 더 누르면 '시점 이동 모드'로 전환됨 -->
   <div class="toolbar">
     <button class="tool-btn active" id="tool-spawn" onclick="selectTool('spawn')">
       <span>🚶</span>사람 생성
@@ -167,13 +169,10 @@
     <button class="tool-btn" id="tool-lightning" onclick="selectTool('lightning')">
       <span>⚡</span>신벌(번개)
     </button>
-    <button class="tool-btn" id="tool-drag" onclick="selectTool('drag')">
-      <span>✋</span>시점 이동
-    </button>
   </div>
 
   <script>
-    // iOS 꾹 누르기 컨텍스트 메뉴 차단
+    // iOS 우클릭 및 길게 누르기 메뉴 차단
     window.addEventListener('contextmenu', (e) => e.preventDefault());
 
     const canvas = document.getElementById('canvas');
@@ -194,7 +193,7 @@
     let offsetX = (canvas.width - WORLD_WIDTH * scale) / 2;
     let offsetY = (canvas.height - WORLD_HEIGHT * scale) / 2;
 
-    let currentTool = 'spawn';
+    let currentTool = 'spawn'; // 초기 도구
     let humans = [];
     let foods = [];
     let effects = [];
@@ -307,9 +306,6 @@
       }
     }
 
-    let isMouseDown = false;
-    let lastX = 0, lastY = 0;
-
     function getTransformedPoint(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
       const screenX = clientX - rect.left;
@@ -346,23 +342,106 @@
       }
     }
 
-    canvas.addEventListener('pointerdown', (e) => {
+    // 터치 및 멀티터치(두손가락 확대/이동) 로직
+    let isTouchActive = false;
+    let lastX = 0, lastY = 0;
+    let initialTouchDist = 0;
+    let lastMidX = 0, lastMidY = 0;
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        isTouchActive = true;
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
+
+        if (currentTool !== null) {
+          const pt = getTransformedPoint(lastX, lastY);
+          applyGodPower(pt);
+        }
+      } else if (e.touches.length === 2) {
+        isTouchActive = false;
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        initialTouchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        lastMidX = (t1.clientX + t2.clientX) / 2;
+        lastMidY = (t1.clientY + t2.clientY) / 2;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1 && isTouchActive) {
+        const touch = e.touches[0];
+        const dx = touch.clientX - lastX;
+        const dy = touch.clientY - lastY;
+
+        if (currentTool === null) {
+          // 도구가 선택 안 된 상태일 때는 1손가락 드래그가 곧 화면 이동
+          offsetX += dx;
+          offsetY += dy;
+        } else {
+          // 도구 사용 중 드래그
+          const pt = getTransformedPoint(touch.clientX, touch.clientY);
+          if (Math.hypot(dx, dy) > 15) {
+            applyGodPower(pt);
+          }
+        }
+        lastX = touch.clientX;
+        lastY = touch.clientY;
+      } else if (e.touches.length === 2) {
+        // 두 손가락 핀치 줌 & 시점 이동
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        const midX = (t1.clientX + t2.clientX) / 2;
+        const midY = (t1.clientY + t2.clientY) / 2;
+
+        if (initialTouchDist > 0) {
+          const factor = dist / initialTouchDist;
+          const rect = canvas.getBoundingClientRect();
+          const zoomX = midX - rect.left;
+          const zoomY = midY - rect.top;
+
+          const newScale = Math.min(Math.max(scale * factor, 0.2), 2.5);
+          offsetX = zoomX - (zoomX - offsetX) * (newScale / scale);
+          offsetY = zoomY - (zoomY - offsetY) * (newScale / scale);
+          scale = newScale;
+
+          offsetX += (midX - lastMidX);
+          offsetY += (midY - lastMidY);
+        }
+
+        initialTouchDist = dist;
+        lastMidX = midX;
+        lastMidY = midY;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) initialTouchDist = 0;
+      if (e.touches.length === 0) isTouchActive = false;
+    });
+
+    // 마우스 지원 (PC 환경 테스트용)
+    let isMouseDown = false;
+    canvas.addEventListener('mousedown', (e) => {
       isMouseDown = true;
       lastX = e.clientX;
       lastY = e.clientY;
 
-      const pt = getTransformedPoint(e.clientX, e.clientY);
-      if (currentTool !== 'drag') {
+      if (currentTool !== null) {
+        const pt = getTransformedPoint(e.clientX, e.clientY);
         applyGodPower(pt);
       }
     });
 
-    canvas.addEventListener('pointermove', (e) => {
+    canvas.addEventListener('mousemove', (e) => {
       if (!isMouseDown) return;
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
 
-      if (currentTool === 'drag') {
+      if (currentTool === null) {
         offsetX += dx;
         offsetY += dy;
       } else {
@@ -375,8 +454,9 @@
       lastY = e.clientY;
     });
 
-    window.addEventListener('pointerup', () => isMouseDown = false);
+    window.addEventListener('mouseup', () => isMouseDown = false);
 
+    // 카메라 조작 관련
     function zoom(factor) {
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
@@ -393,10 +473,16 @@
       offsetY = (canvas.height - WORLD_HEIGHT * scale) / 2;
     }
 
+    // 도구 선택 / 토글 함수 (동일한 버튼 재클릭 시 시점 이동 모드로 전환)
     function selectTool(toolName) {
-      currentTool = toolName;
-      document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-      document.getElementById(`tool-${toolName}`).classList.add('active');
+      if (currentTool === toolName) {
+        currentTool = null; // 도구 해제 -> 1손가락 이동 모드로 자동 전환
+        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+      } else {
+        currentTool = toolName;
+        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`tool-${toolName}`).classList.add('active');
+      }
     }
 
     function init() {
