@@ -277,22 +277,20 @@
       font-weight: bold;
       color: #f59e0b;
       margin-top: 10px;
-      font-size: 0.85rem;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      font-size: 0.9rem;
     }
 
     .log-list {
       margin: 6px 0 14px 0;
-      padding-left: 18px;
-      font-size: 0.75rem;
+      padding-left: 0;
+      list-style: none;
+      font-size: 0.8rem;
       color: #ccc;
-      line-height: 1.5;
+      line-height: 1.6;
     }
 
     .log-list li {
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
 
     .btn-action {
@@ -338,7 +336,7 @@
     </div>
   </div>
 
-  <!-- 하단 컨트롤 패널 (카테고리 탭 + 가로 슬라이드 툴바) -->
+  <!-- 하단 컨트롤 패널 -->
   <div class="control-panel">
     <div class="category-tabs">
       <button class="cat-btn active" id="cat-life" onclick="switchCategory('life')">👥 생물/문명</button>
@@ -393,18 +391,18 @@
       </div>
       
       <div class="modal-body">
-        <div class="log-version">🚀 Ver 2.0 - 슬라이드 UI 대개편 & 평화 선언</div>
+        <div class="log-version">Ver 2.0</div>
         <ul class="log-list">
-          <li><strong>포식자 & 독성 음식 완전 삭제:</strong> 매번 사냥당하고 독에 당하던 주민들의 억울함을 받아들여 깔끔하게 제거했습니다.</li>
-          <li><strong>버튼 폭발 방지 UI 도입:</strong> 하단에 너무 많아 가려지던 버튼들을 [생물/지형/재앙] 3대 카테고리로 정리하고 부드러운 가로 슬라이드를 적용했습니다.</li>
-          <li><strong>터치 및 멀티터치 줌 안정화:</strong> 모바일 환경에서 지형 탐색과 확대/축소가 훨씬 매끄러워졌습니다.</li>
+          <li>- 포식자 및 독성 음식 삭제 🗑️</li>
+          <li>- 카테고리별 슬라이드 메뉴 추가 🎛️</li>
+          <li>- 터치 줌 및 카메라 조작 개선 🔍</li>
         </ul>
 
-        <div class="log-version">👾 Ver 1.0 - 태초의 시련 & 기초 생태계</div>
+        <div class="log-version">Ver 1.0</div>
         <ul class="log-list">
-          <li><strong>포식자 몬스터 투입:</strong> 생태계에 위장 긴장감을 고조시켰던 맹수 추가.</li>
-          <li><strong>독성 음식 배치:</strong> 아무거나 주워 먹다 탈나는 위험천만 생존 요소 추가.</li>
-          <li><strong>에너지 바 시스템:</strong> 각 주민과 유닛의 체력 상태를 직관적으로 볼 수 있게 상태 표시기 탑재.</li>
+          <li>- 포식자 추가 🦁</li>
+          <li>- 독성 음식 추가 🍄</li>
+          <li>- 체력(에너지) 바 추가 🔋</li>
         </ul>
       </div>
 
@@ -426,7 +424,6 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // 메뉴 모달 토글
     function toggleMenu(show) {
       const modal = document.getElementById('menuModal');
       if (show) {
@@ -436,7 +433,6 @@
       }
     }
 
-    // 지형 타일 설정 (80x80 그리드)
     const TILE_SIZE = 30;
     const COLS = 80;
     const ROWS = 80;
@@ -460,7 +456,6 @@
     let meteors = [];
     let effects = [];
 
-    // 사람 클래스
     class Human {
       constructor(x, y, faction) {
         this.x = x;
@@ -581,7 +576,6 @@
       }
     }
 
-    // 좀비 클래스
     class Zombie {
       constructor(x, y) {
         this.x = x;
@@ -630,7 +624,6 @@
       }
     }
 
-    // 운석 클래스
     class Meteor {
       constructor(targetX, targetY) {
         this.x = targetX + 200;
