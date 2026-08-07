@@ -411,11 +411,21 @@
       <div class="toolbar">
         <!-- 생물 / 문명 카테고리 -->
         <button class="tool-btn active" data-category="life" id="tool-human" onclick="selectTool('human')">
-          <span>🧍</span>주민 생성
+          <span>🧍</span>인간
+        </button>
+        <button class="tool-btn" data-category="life" id="tool-elf" onclick="selectTool('elf')">
+          <span>🧝</span>엘프
+        </button>
+        <button class="tool-btn" data-category="life" id="tool-orc" onclick="selectTool('orc')">
+          <span>👹</span>오크
+        </button>
+        <button class="tool-btn" data-category="life" id="tool-dwarf" onclick="selectTool('dwarf')">
+          <span>🧔</span>드워프
         </button>
         <button class="tool-btn" data-category="life" id="tool-zombie" onclick="selectTool('zombie')">
           <span>🧟</span>좀비
         </button>
+
 
         <!-- 지형 / 자연 카테고리 -->
         <button class="tool-btn" data-category="terrain" id="tool-land" onclick="selectTool('land')" style="display:none;">
@@ -538,18 +548,196 @@
     }
 
     class Human {
-      constructor(x, y) {
+      constructor(x, y, race = 'human') {
         this.x = x;
         this.y = y;
-        this.villageId = null; // 초기 무소속
-        this.hp = 100;
-        this.maxHp = 100;
+        this.race = race; // 'human', 'elf', 'orc', 'dwarf'
+        this.villageId = null;
+
+        // 종족별 기본 스탯 설정
+        let baseSpeed = 1.6 + Math.random() * 0.6;
+        let baseHp = 100;
+
+        if (this.race === 'elf') {
+          baseSpeed *= 1.2; // 엘프: 이동속도 +20%
+        } else if (this.race === 'orc') {
+          baseHp = 150;     // 오크: 기본 체력 +50
+        } else if (this.race === 'dwarf') {
+          baseSpeed *= 0.9; // 드워프: 이동속도 -10%
+          baseHp = 130;     // 드워프: 기본 체력 높음
+        }
+
+        this.hp = baseHp;
+        this.maxHp = baseHp;
+        this.speed = baseSpeed;
         this.wood = 0;
-        this.speed = 1.6 + Math.random() * 0.6;
         this.vx = (Math.random() - 0.5) * this.speed;
         this.vy = (Math.random() - 0.5) * this.speed;
         this.walkTimer = 0;
       }
+
+      update() {
+        const tileX = Math.floor(this.x / TILE_SIZE);
+        const tileY = Math.floor(this.y / TILE_SIZE);
+        let speedMult = 1;
+        if (tileX >= 0 && tileX < COLS && tileY >= 0 && tileY < ROWS) {
+          if (grid[tileX][tileY] === TILE.WATER) speedMult = 0.3;
+          if (grid[tileX][tileY] === TILE.MOUNTAIN) speedMult = 0.5;
+        }
+
+        // 1. 소속 찾기 / 마을 생성 로직
+        if (!this.villageId) {
+          let nearVillage = villages.find(v => Math.hypot(v.x - this.x, v.y - this.y) < 180);
+          if (nearVillage) {
+            this.villageId = nearVillage.id;
+          } else {
+            let nearNeutrals = humans.filter(h => !h.villageId && Math.hypot(h.x - this.x, h.y - this.y) < 60);
+            if (nearNeutrals.length >= 2) {
+              let newV = new Village(this.x, this.y);
+              villages.push(newV);
+              nearNeutrals.forEach(h => h.villageId = newV.id);
+            }
+          }
+        }
+
+        let myVillage = villages.find(v => v.id === this.villageId);
+
+        // 2. 타겟팅 (좀비 또는 적대 종족/마을)
+        let target = null;
+        let minDist = 120;
+
+        for (let z of zombies) {
+          let d = Math.hypot(z.x - this.x, z.y - this.y);
+          if (d < minDist) { minDist = d; target = z; }
+        }
+
+        if (!target) {
+          for (let h of humans) {
+            if (h === this) continue;
+            let isEnemy = false;
+
+            // 오크는 타 종족에 대한 공격성이 높음 / 타 종족 간 다른 마을 공격
+            if (this.race === 'orc' && h.race !== 'orc') {
+              isEnemy = true;
+            } else if (h.race === 'orc' && this.race !== 'orc') {
+              isEnemy = true;
+            } else if (this.villageId && h.villageId && h.villageId !== this.villageId) {
+              isEnemy = true;
+            }
+
+            if (isEnemy) {
+              let d = Math.hypot(h.x - this.x, h.y - this.y);
+              if (d < minDist) { minDist = d; target = h; }
+            }
+          }
+        }
+
+        // 3. 이동 및 공격 동작
+        if (target) {
+          const angle = Math.atan2(target.y - this.y, target.x - this.x);
+          this.vx = Math.cos(angle) * this.speed * speedMult;
+          this.vy = Math.sin(angle) * this.speed * speedMult;
+
+          if (minDist < 10) {
+            // 오크 공격력 증가, 드워프 피격 방어력 반영 (피해 40% 감쇄)
+            let attackDmg = (this.race === 'orc') ? 3.5 : 1.8;
+            if (target.race === 'dwarf') attackDmg *= 0.6;
+            target.hp -= attackDmg;
+          }
+        } else {
+          // 채집 및 건물 건설
+          let nearestTree = null;
+          let treeDist = 150;
+          for (let t of trees) {
+            let d = Math.hypot(t.x - this.x, t.y - this.y);
+            if (d < treeDist) { treeDist = d; nearestTree = t; }
+          }
+
+          if (nearestTree && this.wood < 5) {
+            const angle = Math.atan2(nearestTree.y - this.y, nearestTree.x - this.x);
+            this.vx = Math.cos(angle) * this.speed * speedMult;
+            this.vy = Math.sin(angle) * this.speed * speedMult;
+
+            if (treeDist < 12) {
+              // 드워프는 채집 효율 2배 (+2), 타 종족은 (+1)
+              this.wood += (this.race === 'dwarf') ? 2 : 1;
+
+              // 엘프는 나무를 채집할 때 파괴하지 않음
+              if (this.race !== 'elf') {
+                trees = trees.filter(t => t !== nearestTree);
+              }
+            }
+          } else if (this.wood >= 5 && myVillage) {
+            buildings.push({ x: this.x, y: this.y, villageId: this.villageId, hp: 150 });
+            this.wood = 0;
+          } else {
+            this.walkTimer--;
+            if (this.walkTimer <= 0) {
+              const angle = Math.random() * Math.PI * 2;
+              this.vx = Math.cos(angle) * this.speed * speedMult;
+              this.vy = Math.sin(angle) * this.speed * speedMult;
+              this.walkTimer = Math.floor(Math.random() * 50) + 30;
+            }
+          }
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        this.x = Math.max(10, Math.min(WORLD_WIDTH - 10, this.x));
+        this.y = Math.max(10, Math.min(WORLD_HEIGHT - 10, this.y));
+
+        // 자국 건물 근처 체력 회복 및 번식
+        if (this.villageId) {
+          for (let b of buildings) {
+            if (b.villageId === this.villageId && Math.hypot(b.x - this.x, b.y - this.y) < 40) {
+              this.hp = Math.min(this.maxHp, this.hp + 0.1);
+
+              // 인간은 높은 번식력 (확률 2배)
+              let breedChance = (this.race === 'human') ? 0.004 : 0.002;
+              if (Math.random() < breedChance && humans.length < 400) {
+                let child = new Human(this.x + 10, this.y + 10, this.race);
+                child.villageId = this.villageId;
+                humans.push(child);
+              }
+            }
+          }
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // 종족별 피부색 구분
+        let skinColor = '#ffdbac'; // 인간
+        if (this.race === 'orc') skinColor = '#4ade80';   // 오크 (초록)
+        if (this.race === 'elf') skinColor = '#fef08a';   // 엘프 (밝은 피부)
+        if (this.race === 'dwarf') skinColor = '#d97706'; // 드워프 (구리색)
+
+        ctx.fillStyle = skinColor;
+        ctx.fillRect(-3, -10, 6, 5);
+
+        // 마을 색상 적용 (소속 없으면 회색)
+        let myVillage = villages.find(v => v.id === this.villageId);
+        ctx.fillStyle = myVillage ? myVillage.color : '#9ca3af';
+        ctx.fillRect(-4, -5, 8, 7);
+
+        ctx.fillStyle = '#1f2937';
+        ctx.fillRect(-3, 2, 2, 4);
+        ctx.fillRect(1, 2, 2, 4);
+
+        if (this.hp < this.maxHp) {
+          ctx.fillStyle = '#000';
+          ctx.fillRect(-6, -14, 12, 2);
+          ctx.fillStyle = '#22c55e';
+          ctx.fillRect(-6, -14, (this.hp / this.maxHp) * 12, 2);
+        }
+
+        ctx.restore();
+      }
+    }
+
 
       update() {
         const tileX = Math.floor(this.x / TILE_SIZE);
@@ -797,8 +985,8 @@
       const tx = Math.floor(pt.x / TILE_SIZE);
       const ty = Math.floor(pt.y / TILE_SIZE);
 
-      if (currentTool === 'human') {
-        humans.push(new Human(pt.x, pt.y));
+      if (['human', 'elf', 'orc', 'dwarf'].includes(currentTool)) {
+        humans.push(new Human(pt.x, pt.y, currentTool));
       } else if (currentTool === 'tree') {
         trees.push({ x: pt.x + (Math.random()*16-8), y: pt.y + (Math.random()*16-8) });
       } else if (currentTool === 'land' || currentTool === 'water' || currentTool === 'mountain') {
@@ -821,6 +1009,7 @@
         }
       }
     }
+
 
     let isTouchActive = false;
     let lastX = 0, lastY = 0;
