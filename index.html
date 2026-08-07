@@ -391,6 +391,11 @@
       </div>
       
       <div class="modal-body">
+        <div class="log-version">Ver 3.3</div>
+        <ul class="log-list">
+          <li>- 좀비 감염 시 게임이 멈추던 무한 루프 버그 수정 🐛</li>
+        </ul>
+
         <div class="log-version">Ver 3.2</div>
         <ul class="log-list">
           <li>- 게임 내 메뉴 화면 추가 📜</li>
@@ -502,6 +507,7 @@
         this.vx = (Math.random() - 0.5) * this.speed;
         this.vy = (Math.random() - 0.5) * this.speed;
         this.walkTimer = 0;
+        this.zombified = false;
       }
 
       update() {
@@ -523,7 +529,7 @@
 
         if (!target) {
           for (let h of humans) {
-            if (h.faction !== this.faction) {
+            if (h.faction !== this.faction && !h.zombified) {
               let d = Math.hypot(h.x - this.x, h.y - this.y);
               if (d < minDist) { minDist = d; target = h; }
             }
@@ -623,6 +629,7 @@
         let minDist = 200;
 
         for (let h of humans) {
+          if (h.zombified) continue;
           let d = Math.hypot(h.x - this.x, h.y - this.y);
           if (d < minDist) { minDist = d; target = h; }
         }
@@ -634,7 +641,8 @@
 
           if (minDist < 10) {
             target.hp -= 3;
-            if (target.hp <= 0) {
+            if (target.hp <= 0 && !target.zombified) {
+              target.zombified = true;
               zombies.push(new Zombie(target.x, target.y));
             }
           }
@@ -888,11 +896,12 @@
 
     function loop() {
       for (let step = 0; step < gameSpeed; step++) {
-        humans = humans.filter(h => h.hp > 0);
+        humans = humans.filter(h => h.hp > 0 && !h.zombified);
         for (let h of humans) h.update();
 
         zombies = zombies.filter(z => z.hp > 0);
-        for (let z of zombies) z.update();
+        const activeZombies = [...zombies];
+        for (let z of activeZombies) z.update();
 
         for (let i = meteors.length - 1; i >= 0; i--) {
           meteors[i].update();
