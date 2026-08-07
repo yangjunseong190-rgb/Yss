@@ -1,295 +1,1062 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4대 종족 시뮬레이션 - 자원 및 대장간 시스템</title>
-    <style>
-        body {
-            margin: 0;
-            background-color: #1e1e1e;
-            color: #ffffff;
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        canvas {
-            border: 2px solid #555;
-            background-color: #2b2b2b;
-            margin-top: 10px;
-        }
-        #ui {
-            margin-top: 10px;
-            font-size: 14px;
-            display: flex;
-            gap: 15px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>월드박스 디럭스 시뮬레이터 Ver 4.0</title>
+  
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1a1a1a">
+
+  <style>
+    * { 
+      box-sizing: border-box; 
+      touch-action: none; 
+      user-select: none; 
+      -webkit-user-select: none; 
+      -webkit-touch-callout: none; 
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    body { 
+      margin: 0; 
+      padding: 0; 
+      background: #111; 
+      color: #eee; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 상단 상태바 */
+    .header {
+      height: 48px;
+      background: #1e1e24;
+      border-bottom: 2px solid #33333d;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      z-index: 10;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+
+    .stats-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .stat-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #121215;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #3a3a42;
+    }
+
+    .right-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .speed-controls {
+      display: flex;
+      gap: 4px;
+    }
+
+    .speed-btn, .menu-open-btn {
+      background: #2a2a32;
+      border: 1px solid #444450;
+      color: #fff;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .speed-btn.active {
+      background: #ef4444;
+      border-color: #f87171;
+    }
+    .menu-open-btn {
+      background: #3b82f6;
+      border-color: #60a5fa;
+    }
+
+    /* 메인 캔버스 */
+    #canvas-container {
+      flex: 1;
+      position: relative;
+      background: #1a2516;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+
+    /* 화면 줌 버튼 */
+    .zoom-controls {
+      position: absolute;
+      right: 12px;
+      bottom: 110px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 20;
+    }
+    .zoom-btn {
+      width: 40px;
+      height: 40px;
+      background: #2a2a32;
+      color: #fff;
+      border: 2px solid #444452;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+    }
+
+    /* 하단 툴바 패널 */
+    .control-panel {
+      background: #16161a;
+      border-top: 2px solid #33333d;
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+    }
+
+    .category-tabs {
+      display: flex;
+      background: #0d0d10;
+      border-bottom: 1px solid #2a2a32;
+    }
+
+    .cat-btn {
+      flex: 1;
+      padding: 6px 0;
+      background: transparent;
+      border: none;
+      color: #888;
+      font-size: 0.75rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .cat-btn.active {
+      color: #60a5fa;
+      background: #16161a;
+      border-bottom: 2px solid #3b82f6;
+    }
+
+    .toolbar-wrapper {
+      height: 64px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+      padding: 6px 10px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .toolbar-wrapper::-webkit-scrollbar { display: none; }
+
+    .toolbar {
+      display: inline-flex;
+      gap: 8px;
+    }
+
+    .tool-btn {
+      width: 60px;
+      height: 48px;
+      background: #25252e;
+      border: 2px solid #3f3f4d;
+      border-radius: 8px;
+      color: #ccc;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      gap: 2px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .tool-btn.active {
+      background: #2563eb;
+      border-color: #60a5fa;
+      color: #fff;
+      font-weight: bold;
+      box-shadow: 0 0 8px rgba(37, 99, 235, 0.6);
+    }
+    .tool-btn span { font-size: 1.1rem; }
+
+    /* 메인 화면 / 모달 화면 공통 모듈 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      width: 90%;
+      max-width: 440px;
+      max-height: 82vh;
+      background: #1e1e24;
+      border: 2px solid #3b82f6;
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8);
+      touch-action: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #3a3a42;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+
+    .modal-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #60a5fa;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: #aaa;
+      font-size: 1.3rem;
+      cursor: pointer;
+    }
+
+    .modal-body {
+      overflow-y: auto;
+      flex: 1;
+      padding-right: 4px;
+      touch-action: pan-y;
+    }
+
+    .log-version {
+      font-weight: bold;
+      color: #f59e0b;
+      margin-top: 12px;
+      font-size: 0.95rem;
+    }
+
+    .log-list {
+      margin: 6px 0 12px 0;
+      padding-left: 0;
+      list-style: none;
+      font-size: 0.82rem;
+      color: #ccc;
+      line-height: 1.6;
+    }
+
+    .btn-action {
+      width: 100%;
+      padding: 12px;
+      margin-top: 12px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+  </style>
 </head>
 <body>
 
-<div id="ui">
-    <div><b>초록:</b> 나무 | <b>회색:</b> 돌 | <b>슬레이트:</b> 철 | <b>주황:</b> 금 | <b>노랑:</b> 밭(식량)</div>
-</div>
-<canvas id="simCanvas" width="900" height="650"></canvas>
+  <!-- 시작 메인 메뉴 화면 -->
+  <div class="modal-overlay active" id="startScreen">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">🌍 월드박스 디럭스</div>
+        <span style="font-size: 0.75rem; color: #888;">Ver 4.0</span>
+      </div>
+      
+      <div class="modal-body">
+        <div style="text-align: center; margin: 10px 0 20px 0;">
+          <h2 style="margin: 0; color: #fff; font-size: 1.4rem;">창세 시뮬레이터</h2>
+          <p style="margin: 6px 0 0 0; color: #aaa; font-size: 0.8rem;">자신만의 세계와 문명을 직접 다스려보세요!</p>
+        </div>
 
-<script>
-// 1단계 종족 데이터 유지
-const RACE_DATA = {
-    human: { name: 'Human', color: '#3498db', baseSpeed: 2.0, baseHp: 100, baseAtk: 10, baseDef: 5, reproduceRate: 0.003, maxAge: 3000, harvestMult: 1.0, destroyTreeOnGather: true },
-    elf:   { name: 'Elf',   color: '#2ecc71', baseSpeed: 2.4, baseHp: 90,  baseAtk: 12, baseDef: 4, reproduceRate: 0.001, maxAge: 8000, harvestMult: 1.0, destroyTreeOnGather: false },
-    orc:   { name: 'Orc',   color: '#e74c3c', baseSpeed: 2.0, baseHp: 150, baseAtk: 22, baseDef: 3, reproduceRate: 0.0015, maxAge: 2500, harvestMult: 1.0, destroyTreeOnGather: true },
-    dwarf: { name: 'Dwarf', color: '#f39c12', baseSpeed: 1.8, baseHp: 130, baseAtk: 14, baseDef: 12, reproduceRate: 0.001, maxAge: 4500, harvestMult: 2.0, destroyTreeOnGather: true }
-};
+        <div style="border-top: 1px solid #333; padding-top: 10px;">
+          <div style="font-weight: bold; color: #60a5fa; font-size: 0.9rem; margin-bottom: 6px;">📜 패치노트 (업데이트 기록)</div>
+          
+          <div class="log-version">Ver 4.0 (문명 대개편 & 시작 메뉴) 🏰</div>
+          <ul class="log-list">
+            <li>- 시작 메인 메뉴 화면 도입 (게임 제목, 패치노트, 플레이 버튼) 🎮</li>
+            <li>- 게임 시작 시 빈 세계(생명체 없음)로 시작 🌍</li>
+            <li>- 소속 없는 무소속 주민 추가 및 동적 다중 마을/문명 창설 시스템 구축 🏛️</li>
+            <li>- 주민들이 모여 독립적인 국기와 색상을 가진 다양한 마을을 건설 🚩</li>
+          </ul>
 
-// 1. 자원 확장 (trees, mines: stone/iron/gold, crops: food)
-class Resource {
-    constructor(x, y, type) {
-        this.x = x;
-        this.y = y;
-        this.type = type; // 'tree', 'stone', 'iron', 'gold', 'crop'
-        this.amount = 100;
-        this.isDestroyed = false;
-    }
+          <div class="log-version">Ver 3.2</div>
+          <ul class="log-list">
+            <li>- 게임 내 메뉴 화면 및 실시간 패치노트 시스템 추가 📜</li>
+          </ul>
 
-    draw(ctx) {
-        if (this.isDestroyed) return;
-        ctx.beginPath();
-        if (this.type === 'tree') {
-            ctx.fillStyle = '#27ae60';
-            ctx.arc(this.x, this.y, 7, 0, Math.PI * 2);
-            ctx.fill();
-        } else if (this.type === 'crop') {
-            ctx.fillStyle = '#f1c40f';
-            ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            // 광산 노드 (돌, 철, 금)
-            ctx.fillStyle = this.type === 'stone' ? '#95a5a6' : (this.type === 'iron' ? '#7f8c8d' : '#e67e22');
-            ctx.fillRect(this.x - 6, this.y - 6, 12, 12);
-        }
-    }
-}
+          <div class="log-version">Ver 3.1</div>
+          <ul class="log-list">
+            <li>- 하단 툴바 카테고리 탭 및 슬라이드 UI 대개편 🎛️</li>
+          </ul>
 
-// 2 & 3. 마을 클래스: 창고, 건물 분화(Forge, Windmill), 장비 제작
-class Village {
-    constructor(x, y, race) {
-        this.x = x;
-        this.y = y;
-        this.race = race;
-        // 마을 자원 창고
-        this.resources = { wood: 0, stone: 0, iron: 0, gold: 0, food: 0 };
-        this.buildings = []; // 'House', 'Forge', 'Windmill'
-        this.equipment = { weaponLevel: 0, armorLevel: 0 }; // 무기/갑옷 강화 단계
-    }
+          <div class="log-version">Ver 2.2</div>
+          <ul class="log-list">
+            <li>- '시점 이동' 버튼 삭제 및 버튼 재터치 토글 방식 전환 👆</li>
+            <li>- 핀치 줌(Pinch-to-Zoom) 복구 및 조작감 고도화 🤏</li>
+          </ul>
 
-    // 건물 건설 및 장비 제작 업데이트
-    update() {
-        // 풍차 건설 (목재 40, 석재 20)
-        if (!this.buildings.includes('Windmill') && this.resources.wood >= 40 && this.resources.stone >= 20) {
-            this.resources.wood -= 40;
-            this.resources.stone -= 20;
-            this.buildings.push('Windmill');
-        }
-        // 대장간 건설 (목재 50, 석재 50)
-        if (!this.buildings.includes('Forge') && this.resources.wood >= 50 && this.resources.stone >= 50) {
-            this.resources.wood -= 50;
-            this.resources.stone -= 50;
-            this.buildings.push('Forge');
-        }
-        // 일반 집 건설 (목재 30)
-        if (this.resources.wood >= 30) {
-            this.resources.wood -= 30;
-            this.buildings.push('House');
-        }
+          <div class="log-version">Ver 2.1</div>
+          <ul class="log-list">
+            <li>- 아이폰 꾹 누르기 완전 차단 및 터치 하이라이트 제거 📱</li>
+          </ul>
 
-        // 4. 대장간 존재 시 장비 제작
-        if (this.buildings.includes('Forge')) {
-            // 철 소모 -> 무기 제작 (공격력 증가)
-            if (this.resources.iron >= 25) {
-                this.resources.iron -= 25;
-                this.equipment.weaponLevel += 1;
-            }
-            // 금 소모 -> 갑옷 제작 (방어력 증가)
-            if (this.resources.gold >= 25) {
-                this.resources.gold -= 25;
-                this.equipment.armorLevel += 1;
-            }
-        }
-    }
+          <div class="log-version">Ver 2.0</div>
+          <ul class="log-list">
+            <li>- 픽셀 도트 그래픽 개편, Zoom 및 드래그, 주민 체력/수명 시스템 ⏳</li>
+            <li>- 포식자 삭제 🗑️ / 독성 음식 삭제 🗑️</li>
+          </ul>
 
-    draw(ctx) {
-        // 마을 회관
-        ctx.fillStyle = RACE_DATA[this.race].color;
-        ctx.fillRect(this.x - 14, this.y - 14, 28, 28);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(this.x - 14, this.y - 14, 28, 28);
-        ctx.lineWidth = 1;
+          <div class="log-version">Ver 1.0 (태초의 시련)</div>
+          <ul class="log-list">
+            <li>- 초기 포식자, 독성 음식, 에너지 바 구현 🦁</li>
+          </ul>
+        </div>
+      </div>
 
-        // 건설된 건물 오프셋 표시
-        this.buildings.forEach((b, i) => {
-            const bx = this.x + Math.cos(i) * 32;
-            const by = this.y + Math.sin(i) * 32;
-            ctx.fillStyle = b === 'Forge' ? '#e74c3c' : (b === 'Windmill' ? '#f39c12' : '#bdc3c7');
-            ctx.fillRect(bx - 5, by - 5, 10, 10);
-        });
-    }
-}
+      <button class="btn-action" onclick="startGame()">▶️ 게임 시작하기</button>
+    </div>
+  </div>
 
-// 주민 클래스
-class Citizen {
-    constructor(x, y, raceType, village) {
-        this.x = x;
-        this.y = y;
-        this.race = raceType;
-        this.village = village;
-        this.traits = RACE_DATA[this.race];
-
-        this.speed = this.traits.baseSpeed;
-        this.maxHp = this.traits.baseHp;
-        this.hp = this.traits.baseHp;
-        this.age = 0;
-        this.carriedResource = null;
-    }
-
-    // 대장간 장비 제작 결과에 따른 스탯 자동 반영
-    get atk() {
-        const bonus = this.village ? this.village.equipment.weaponLevel * 6 : 0;
-        return this.traits.baseAtk + bonus;
-    }
-
-    get def() {
-        const bonus = this.village ? this.village.equipment.armorLevel * 4 : 0;
-        return this.traits.baseDef + bonus;
-    }
-
-    moveTo(tx, ty) {
-        const dx = tx - this.x, dy = ty - this.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist > 2) {
-            this.x += (dx / dist) * this.speed;
-            this.y += (dy / dist) * this.speed;
-        }
-    }
-
-    update(citizens, resources) {
-        this.age++;
-        if (this.age > this.traits.maxAge || this.hp <= 0) return false;
-
-        // 자원 보유 시 마을 창고로 운반
-        if (this.carriedResource && this.village) {
-            const dist = Math.hypot(this.village.x - this.x, this.village.y - this.y);
-            if (dist < 15) {
-                const map = { tree: 'wood', stone: 'stone', iron: 'iron', gold: 'gold', crop: 'food' };
-                this.village.resources[map[this.carriedResource.type]] += this.carriedResource.amount;
-                this.carriedResource = null;
-            } else {
-                this.moveTo(this.village.x, this.village.y);
-            }
-            return true;
-        }
-
-        // 자원 채집
-        const target = resources.find(r => !r.isDestroyed);
-        if (target) {
-            const dist = Math.hypot(target.x - this.x, target.y - this.y);
-            if (dist < 10) {
-                const amount = 10 * this.traits.harvestMult;
-                target.amount -= amount;
-                this.carriedResource = { type: target.type, amount: amount };
-
-                if (target.amount <= 0) {
-                    if (target.type === 'tree' && !this.traits.destroyTreeOnGather) {
-                        target.amount = 100; // 엘프 나무 보존
-                    } else {
-                        target.isDestroyed = true;
-                    }
-                }
-            } else {
-                this.moveTo(target.x, target.y);
-            }
-        }
-
-        // 번식 (마을 식량 소비)
-        if (this.village && this.village.resources.food >= 20 && Math.random() < this.traits.reproduceRate) {
-            this.village.resources.food -= 20;
-            citizens.push(new Citizen(this.x, this.y, this.race, this.village));
-        }
-
-        return true;
-    }
-
-    draw(ctx) {
-        ctx.fillStyle = this.traits.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 장비 착용 시 외곽선 테두리 강조
-        if (this.village && (this.village.equipment.weaponLevel > 0 || this.village.equipment.armorLevel > 0)) {
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            ctx.lineWidth = 1;
-        }
-    }
-}
-
-// Environment Setup
-const canvas = document.getElementById('simCanvas');
-const ctx = canvas.getContext('2d');
-
-const villages = [];
-const citizens = [];
-const resources = [];
-
-function init() {
-    const races = ['human', 'elf', 'orc', 'dwarf'];
+  <!-- 상단 상태바 -->
+  <div class="header">
+    <div class="stats-group">
+      <div class="stat-badge">👨‍👩‍👧‍👦 인구 <span id="popCount" style="color:#60a5fa">0</span></div>
+      <div class="stat-badge">🏰 마을 <span id="villageCount" style="color:#f59e0b">0</span></div>
+      <div class="stat-badge">🧟 좀비 <span id="zombieCount" style="color:#4ade80">0</span></div>
+    </div>
     
-    // 마을 및 주민 배치
-    races.forEach((race, i) => {
-        const vx = 200 + (i % 2) * 500;
-        const vy = 150 + Math.floor(i / 2) * 350;
-        const v = new Village(vx, vy, race);
-        villages.push(v);
+    <div class="right-group">
+      <div class="speed-controls">
+        <button class="speed-btn" id="spd-0" onclick="setSpeed(0)">⏸️</button>
+        <button class="speed-btn active" id="spd-1" onclick="setSpeed(1)">1x</button>
+        <button class="speed-btn" id="spd-5" onclick="setSpeed(5)">5x</button>
+      </div>
+      <button class="menu-open-btn" onclick="toggleMenu(true)">📜 메뉴</button>
+    </div>
+  </div>
 
-        for (let j = 0; j < 4; j++) {
-            citizens.push(new Citizen(vx + (Math.random() * 40 - 20), vy + (Math.random() * 40 - 20), race, v));
-        }
-    });
+  <!-- 게임 메인 영역 -->
+  <div id="canvas-container">
+    <canvas id="canvas"></canvas>
+    
+    <div class="zoom-controls">
+      <div class="zoom-btn" onclick="zoom(1.25)">+</div>
+      <div class="zoom-btn" onclick="zoom(0.8)">-</div>
+      <div class="zoom-btn" style="font-size: 0.75rem;" onclick="resetCamera()">[ ]</div>
+    </div>
+  </div>
 
-    // 무작위 자원 노드 생성 (나무, 광산, 밭)
-    const types = ['tree', 'stone', 'iron', 'gold', 'crop'];
-    for (let i = 0; i < 45; i++) {
-        const type = types[Math.floor(Math.random() * types.length)];
-        resources.push(new Resource(Math.random() * (canvas.width - 100) + 50, Math.random() * (canvas.height - 100) + 50, type));
+  <!-- 하단 컨트롤 패널 -->
+  <div class="control-panel">
+    <div class="category-tabs">
+      <button class="cat-btn active" id="cat-life" onclick="switchCategory('life')">👥 생물/문명</button>
+      <button class="cat-btn" id="cat-terrain" onclick="switchCategory('terrain')">🌍 지형/자연</button>
+      <button class="cat-btn" id="cat-power" onclick="switchCategory('power')">⚡ 재앙/신벌</button>
+    </div>
+
+    <div class="toolbar-wrapper">
+      <div class="toolbar">
+        <!-- 생물 / 문명 카테고리 -->
+        <button class="tool-btn active" data-category="life" id="tool-human" onclick="selectTool('human')">
+          <span>🧍</span>주민 생성
+        </button>
+        <button class="tool-btn" data-category="life" id="tool-zombie" onclick="selectTool('zombie')">
+          <span>🧟</span>좀비
+        </button>
+
+        <!-- 지형 / 자연 카테고리 -->
+        <button class="tool-btn" data-category="terrain" id="tool-land" onclick="selectTool('land')" style="display:none;">
+          <span>🌱</span>땅 생성
+        </button>
+        <button class="tool-btn" data-category="terrain" id="tool-water" onclick="selectTool('water')" style="display:none;">
+          <span>🌊</span>바다 생성
+        </button>
+        <button class="tool-btn" data-category="terrain" id="tool-mountain" onclick="selectTool('mountain')" style="display:none;">
+          <span>⛰️</span>산 생성
+        </button>
+        <button class="tool-btn" data-category="terrain" id="tool-tree" onclick="selectTool('tree')" style="display:none;">
+          <span>🌲</span>나무 심기
+        </button>
+
+        <!-- 재앙 / 신벌 카테고리 -->
+        <button class="tool-btn" data-category="power" id="tool-meteor" onclick="selectTool('meteor')" style="display:none;">
+          <span>☄️</span>운석 투하
+        </button>
+        <button class="tool-btn" data-category="power" id="tool-heal" onclick="selectTool('heal')" style="display:none;">
+          <span>💖</span>치유의 비
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 인게임 메뉴 / 패치노트 모달 -->
+  <div class="modal-overlay" id="menuModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">⚙️ 메뉴 & 패치노트</div>
+        <button class="close-btn" onclick="toggleMenu(false)">✕</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="log-version">Ver 4.0</div>
+        <ul class="log-list">
+          <li>- 시작 메인 메뉴 화면 도입 🎮</li>
+          <li>- 게임 시작 시 빈 세계(생명체 없음)로 시작 🌍</li>
+          <li>- 무소속 주민 및 다중 마을/문명 생성 시스템 추가 🏛️</li>
+        </ul>
+
+        <div class="log-version">Ver 3.2</div>
+        <ul class="log-list">
+          <li>- 게임 내 메뉴 화면 및 패치노트 시스템 📜</li>
+        </ul>
+
+        <div class="log-version">Ver 3.1</div>
+        <ul class="log-list">
+          <li>- 하단 툴바 카테고리 탭 UI 개편 🎛️</li>
+        </ul>
+
+        <div class="log-version">Ver 2.0</div>
+        <ul class="log-list">
+          <li>- 픽셀 도트 그래픽, 줌/드래그, 주민 체력/수명 ⏳</li>
+          <li>- 포식자 및 독성 음식 삭제 🗑️</li>
+        </ul>
+      </div>
+
+      <button class="btn-action" onclick="toggleMenu(false)">🎮 시뮬레이션으로 돌아가기</button>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('canvas-container');
+
+    function resizeCanvas() {
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
     }
-}
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
-function loop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function toggleMenu(show) {
+      const modal = document.getElementById('menuModal');
+      if (show) modal.classList.add('active');
+      else modal.classList.remove('active');
+    }
 
-    resources.forEach(r => r.draw(ctx));
-    villages.forEach(v => {
-        v.update();
-        v.draw(ctx);
-    });
+    const TILE_SIZE = 30;
+    const COLS = 80;
+    const ROWS = 80;
+    const WORLD_WIDTH = COLS * TILE_SIZE;
+    const WORLD_HEIGHT = ROWS * TILE_SIZE;
 
-    for (let i = citizens.length - 1; i >= 0; i--) {
-        if (!citizens[i].update(citizens, resources)) {
-            citizens.splice(i, 1);
+    const TILE = { WATER: 0, LAND: 1, MOUNTAIN: 2 };
+    let grid = Array(COLS).fill(0).map(() => Array(ROWS).fill(TILE.LAND));
+
+    let scale = 0.4;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    let currentTool = 'human';
+    let gameSpeed = 1;
+
+    // 동적 생성에 사용할 색상들
+    const PALETTE = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308', '#f97316', '#14b8a6'];
+
+    let humans = [];
+    let zombies = [];
+    let villages = [];
+    let buildings = [];
+    let trees = [];
+    let meteors = [];
+    let effects = [];
+
+    class Village {
+      constructor(x, y) {
+        this.id = Math.random().toString(36).substr(2, 9);
+        this.name = `마을 ${villages.length + 1}`;
+        this.color = PALETTE[villages.length % PALETTE.length];
+        this.x = x;
+        this.y = y;
+        this.wood = 0;
+      }
+    }
+
+    class Human {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.villageId = null; // 초기 무소속
+        this.hp = 100;
+        this.maxHp = 100;
+        this.wood = 0;
+        this.speed = 1.6 + Math.random() * 0.6;
+        this.vx = (Math.random() - 0.5) * this.speed;
+        this.vy = (Math.random() - 0.5) * this.speed;
+        this.walkTimer = 0;
+      }
+
+      update() {
+        const tileX = Math.floor(this.x / TILE_SIZE);
+        const tileY = Math.floor(this.y / TILE_SIZE);
+        let speedMult = 1;
+        if (tileX >= 0 && tileX < COLS && tileY >= 0 && tileY < ROWS) {
+          if (grid[tileX][tileY] === TILE.WATER) speedMult = 0.3;
+          if (grid[tileX][tileY] === TILE.MOUNTAIN) speedMult = 0.5;
+        }
+
+        // 1. 소속 찾기 / 마을 생성 로직
+        if (!this.villageId) {
+          // 근처 마을이 있는지 검색
+          let nearVillage = villages.find(v => Math.hypot(v.x - this.x, v.y - this.y) < 180);
+          if (nearVillage) {
+            this.villageId = nearVillage.id;
+          } else {
+            // 주변의 무소속 주민 수 파악 후 마을 생성
+            let nearNeutrals = humans.filter(h => !h.villageId && Math.hypot(h.x - this.x, h.y - this.y) < 60);
+            if (nearNeutrals.length >= 2) {
+              let newV = new Village(this.x, this.y);
+              villages.push(newV);
+              nearNeutrals.forEach(h => h.villageId = newV.id);
+            }
+          }
+        }
+
+        let myVillage = villages.find(v => v.id === this.villageId);
+
+        // 2. 타겟팅 (좀비 또는 적대 마을)
+        let target = null;
+        let minDist = 120;
+
+        for (let z of zombies) {
+          let d = Math.hypot(z.x - this.x, z.y - this.y);
+          if (d < minDist) { minDist = d; target = z; }
+        }
+
+        if (!target && this.villageId) {
+          for (let h of humans) {
+            if (h.villageId && h.villageId !== this.villageId) {
+              let d = Math.hypot(h.x - this.x, h.y - this.y);
+              if (d < minDist) { minDist = d; target = h; }
+            }
+          }
+        }
+
+        // 3. 이동 및 동작
+        if (target) {
+          const angle = Math.atan2(target.y - this.y, target.x - this.x);
+          this.vx = Math.cos(angle) * this.speed * speedMult;
+          this.vy = Math.sin(angle) * this.speed * speedMult;
+
+          if (minDist < 10) {
+            target.hp -= 1.8;
+          }
         } else {
-            citizens[i].draw(ctx);
+          // 채집 및 건물 건설
+          let nearestTree = null;
+          let treeDist = 150;
+          for (let t of trees) {
+            let d = Math.hypot(t.x - this.x, t.y - this.y);
+            if (d < treeDist) { treeDist = d; nearestTree = t; }
+          }
+
+          if (nearestTree && this.wood < 5) {
+            const angle = Math.atan2(nearestTree.y - this.y, nearestTree.x - this.x);
+            this.vx = Math.cos(angle) * this.speed * speedMult;
+            this.vy = Math.sin(angle) * this.speed * speedMult;
+
+            if (treeDist < 12) {
+              this.wood += 1;
+              trees = trees.filter(t => t !== nearestTree);
+            }
+          } else if (this.wood >= 5 && myVillage) {
+            buildings.push({ x: this.x, y: this.y, villageId: this.villageId, hp: 150 });
+            this.wood = 0;
+          } else {
+            this.walkTimer--;
+            if (this.walkTimer <= 0) {
+              const angle = Math.random() * Math.PI * 2;
+              this.vx = Math.cos(angle) * this.speed * speedMult;
+              this.vy = Math.sin(angle) * this.speed * speedMult;
+              this.walkTimer = Math.floor(Math.random() * 50) + 30;
+            }
+          }
         }
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        this.x = Math.max(10, Math.min(WORLD_WIDTH - 10, this.x));
+        this.y = Math.max(10, Math.min(WORLD_HEIGHT - 10, this.y));
+
+        // 자국 건물 근처 체력 회복 및 번식
+        if (this.villageId) {
+          for (let b of buildings) {
+            if (b.villageId === this.villageId && Math.hypot(b.x - this.x, b.y - this.y) < 40) {
+              this.hp = Math.min(this.maxHp, this.hp + 0.1);
+              if (Math.random() < 0.002 && humans.length < 400) {
+                let child = new Human(this.x + 10, this.y + 10);
+                child.villageId = this.villageId;
+                humans.push(child);
+              }
+            }
+          }
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        ctx.fillStyle = '#ffdbac';
+        ctx.fillRect(-3, -10, 6, 5);
+
+        // 마을 색상 적용 (소속 없으면 회색)
+        let myVillage = villages.find(v => v.id === this.villageId);
+        ctx.fillStyle = myVillage ? myVillage.color : '#9ca3af';
+        ctx.fillRect(-4, -5, 8, 7);
+
+        ctx.fillStyle = '#1f2937';
+        ctx.fillRect(-3, 2, 2, 4);
+        ctx.fillRect(1, 2, 2, 4);
+
+        if (this.hp < this.maxHp) {
+          ctx.fillStyle = '#000';
+          ctx.fillRect(-6, -14, 12, 2);
+          ctx.fillStyle = '#22c55e';
+          ctx.fillRect(-6, -14, (this.hp / this.maxHp) * 12, 2);
+        }
+
+        ctx.restore();
+      }
     }
 
-    requestAnimationFrame(loop);
-}
+    class Zombie {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.hp = 80;
+        this.speed = 1.2;
+      }
 
-init();
-loop();
-</script>
+      update() {
+        let target = null;
+        let minDist = 200;
+
+        for (let h of humans) {
+          let d = Math.hypot(h.x - this.x, h.y - this.y);
+          if (d < minDist) { minDist = d; target = h; }
+        }
+
+        if (target) {
+          const angle = Math.atan2(target.y - this.y, target.x - this.x);
+          this.x += Math.cos(angle) * this.speed;
+          this.y += Math.sin(angle) * this.speed;
+
+          if (minDist < 10) {
+            target.hp -= 3;
+            if (target.hp <= 0) {
+              zombies.push(new Zombie(target.x, target.y));
+            }
+          }
+        } else {
+          this.x += (Math.random() - 0.5) * this.speed;
+          this.y += (Math.random() - 0.5) * this.speed;
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.fillStyle = '#4ade80';
+        ctx.fillRect(-3, -10, 6, 5);
+        ctx.fillStyle = '#374151';
+        ctx.fillRect(-4, -5, 8, 7);
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(-3, 2, 2, 4);
+        ctx.fillRect(1, 2, 2, 4);
+        ctx.restore();
+      }
+    }
+
+    class Meteor {
+      constructor(targetX, targetY) {
+        this.x = targetX + 200;
+        this.y = targetY - 400;
+        this.targetX = targetX;
+        this.targetY = targetY;
+        this.speed = 18;
+        this.exploded = false;
+      }
+
+      update() {
+        const angle = Math.atan2(this.targetY - this.y, this.targetX - this.x);
+        this.x += Math.cos(angle) * this.speed;
+        this.y += Math.sin(angle) * this.speed;
+
+        if (Math.hypot(this.targetX - this.x, this.targetY - this.y) < 15) {
+          this.exploded = true;
+          const centerTileX = Math.floor(this.targetX / TILE_SIZE);
+          const centerTileY = Math.floor(this.targetY / TILE_SIZE);
+
+          for (let tx = centerTileX - 3; tx <= centerTileX + 3; tx++) {
+            for (let ty = centerTileY - 3; ty <= centerTileY + 3; ty++) {
+              if (tx >= 0 && tx < COLS && ty >= 0 && ty < ROWS) {
+                if (Math.hypot(tx - centerTileX, ty - centerTileY) <= 3) {
+                  grid[tx][ty] = TILE.WATER;
+                }
+              }
+            }
+          }
+
+          humans = humans.filter(h => Math.hypot(h.x - this.targetX, h.y - this.targetY) > 90);
+          zombies = zombies.filter(z => Math.hypot(z.x - this.targetX, z.y - this.targetY) > 90);
+          buildings = buildings.filter(b => Math.hypot(b.x - this.targetX, b.y - this.targetY) > 100);
+          trees = trees.filter(t => Math.hypot(t.x - this.targetX, t.y - this.targetY) > 100);
+
+          effects.push({ type: 'explosion', x: this.targetX, y: this.targetY, radius: 90, life: 25 });
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function getTransformedPoint(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (clientX - rect.left - offsetX) / scale,
+        y: (clientY - rect.top - offsetY) / scale
+      };
+    }
+
+    function applyGodPower(pt) {
+      if (pt.x < 0 || pt.x > WORLD_WIDTH || pt.y < 0 || pt.y > WORLD_HEIGHT) return;
+
+      const tx = Math.floor(pt.x / TILE_SIZE);
+      const ty = Math.floor(pt.y / TILE_SIZE);
+
+      if (currentTool === 'human') {
+        humans.push(new Human(pt.x, pt.y));
+      } else if (currentTool === 'tree') {
+        trees.push({ x: pt.x + (Math.random()*16-8), y: pt.y + (Math.random()*16-8) });
+      } else if (currentTool === 'land' || currentTool === 'water' || currentTool === 'mountain') {
+        const typeMap = { 'land': TILE.LAND, 'water': TILE.WATER, 'mountain': TILE.MOUNTAIN };
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            if (tx+dx >= 0 && tx+dx < COLS && ty+dy >= 0 && ty+dy < ROWS) {
+              grid[tx+dx][ty+dy] = typeMap[currentTool];
+            }
+          }
+        }
+      } else if (currentTool === 'zombie') {
+        zombies.push(new Zombie(pt.x, pt.y));
+      } else if (currentTool === 'meteor') {
+        meteors.push(new Meteor(pt.x, pt.y));
+      } else if (currentTool === 'heal') {
+        effects.push({ type: 'heal', x: pt.x, y: pt.y, radius: 70, life: 20 });
+        for (let h of humans) {
+          if (Math.hypot(h.x - pt.x, h.y - pt.y) < 70) h.hp = h.maxHp;
+        }
+      }
+    }
+
+    let isTouchActive = false;
+    let lastX = 0, lastY = 0;
+    let initialTouchDist = 0;
+    let lastMidX = 0, lastMidY = 0;
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        isTouchActive = true;
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
+        if (currentTool !== null) {
+          applyGodPower(getTransformedPoint(lastX, lastY));
+        }
+      } else if (e.touches.length === 2) {
+        isTouchActive = false;
+        const t1 = e.touches[0], t2 = e.touches[1];
+        initialTouchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        lastMidX = (t1.clientX + t2.clientX) / 2;
+        lastMidY = (t1.clientY + t2.clientY) / 2;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1 && isTouchActive) {
+        const touch = e.touches[0];
+        const dx = touch.clientX - lastX;
+        const dy = touch.clientY - lastY;
+
+        if (currentTool === null) {
+          offsetX += dx;
+          offsetY += dy;
+        } else {
+          if (Math.hypot(dx, dy) > 12) {
+            applyGodPower(getTransformedPoint(touch.clientX, touch.clientY));
+          }
+        }
+        lastX = touch.clientX;
+        lastY = touch.clientY;
+      } else if (e.touches.length === 2) {
+        const t1 = e.touches[0], t2 = e.touches[1];
+        const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        const midX = (t1.clientX + t2.clientX) / 2;
+        const midY = (t1.clientY + t2.clientY) / 2;
+
+        if (initialTouchDist > 0) {
+          const factor = dist / initialTouchDist;
+          const rect = canvas.getBoundingClientRect();
+          const zoomX = midX - rect.left;
+          const zoomY = midY - rect.top;
+
+          const newScale = Math.min(Math.max(scale * factor, 0.15), 2.5);
+          offsetX = zoomX - (zoomX - offsetX) * (newScale / scale);
+          offsetY = zoomY - (zoomY - offsetY) * (newScale / scale);
+          scale = newScale;
+
+          offsetX += (midX - lastMidX);
+          offsetY += (midY - lastMidY);
+        }
+
+        initialTouchDist = dist;
+        lastMidX = midX;
+        lastMidY = midY;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) initialTouchDist = 0;
+      if (e.touches.length === 0) isTouchActive = false;
+    });
+
+    function zoom(factor) {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const newScale = Math.min(Math.max(scale * factor, 0.15), 2.5);
+      offsetX = centerX - (centerX - offsetX) * (newScale / scale);
+      offsetY = centerY - (centerY - offsetY) * (newScale / scale);
+      scale = newScale;
+    }
+
+    function resetCamera() {
+      scale = 0.4;
+      offsetX = (canvas.width - WORLD_WIDTH * scale) / 2;
+      offsetY = (canvas.height - WORLD_HEIGHT * scale) / 2;
+    }
+
+    function switchCategory(catName) {
+      document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`cat-${catName}`).classList.add('active');
+
+      document.querySelectorAll('.tool-btn').forEach(btn => {
+        if (btn.dataset.category === catName) {
+          btn.style.display = 'inline-flex';
+        } else {
+          btn.style.display = 'none';
+        }
+      });
+    }
+
+    function selectTool(toolName) {
+      if (currentTool === toolName) {
+        currentTool = null;
+        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+      } else {
+        currentTool = toolName;
+        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`tool-${toolName}`).classList.add('active');
+      }
+    }
+
+    function setSpeed(spd) {
+      gameSpeed = spd;
+      document.querySelectorAll('.speed-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`spd-${spd}`).classList.add('active');
+    }
+
+    // 게임 시작 시 깨끗한 빈 세계로 초기화
+    function startGame() {
+      document.getElementById('startScreen').classList.remove('active');
+      
+      resetCamera();
+      
+      // 지형 생성 (주변 해안가 처리)
+      for (let x = 0; x < COLS; x++) {
+        for (let y = 0; y < ROWS; y++) {
+          if (x < 5 || x > COLS-6 || y < 5 || y > ROWS-6) {
+            grid[x][y] = TILE.WATER;
+          } else {
+            grid[x][y] = TILE.LAND;
+          }
+        }
+      }
+
+      // 생명체 없는 깨끗한 빈 상태로 초기화
+      humans = [];
+      zombies = [];
+      villages = [];
+      buildings = [];
+      meteors = [];
+      effects = [];
+      trees = [];
+
+      // 자연물(나무만 일부 배치)
+      for (let i = 0; i < 80; i++) {
+        trees.push({ x: Math.random() * (WORLD_WIDTH - 200) + 100, y: Math.random() * (WORLD_HEIGHT - 200) + 100 });
+      }
+    }
+
+    function loop() {
+      for (let step = 0; step < gameSpeed; step++) {
+        // 인구 및 마을 관리
+        humans = humans.filter(h => h.hp > 0);
+        for (let h of humans) h.update();
+
+        zombies = zombies.filter(z => z.hp > 0);
+        for (let z of zombies) z.update();
+
+        // 주민이 한 명도 없는 마을은 멸망 처리
+        villages = villages.filter(v => humans.some(h => h.villageId === v.id));
+
+        for (let i = meteors.length - 1; i >= 0; i--) {
+          meteors[i].update();
+          if (meteors[i].exploded) meteors.splice(i, 1);
+        }
+
+        if (Math.random() < 0.03 && trees.length < 150) {
+          trees.push({ x: Math.random() * (WORLD_WIDTH - 100) + 50, y: Math.random() * (WORLD_HEIGHT - 100) + 50 });
+        }
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(offsetX, offsetY);
+      ctx.scale(scale, scale);
+
+      // 타일 그리기
+      for (let x = 0; x < COLS; x++) {
+        for (let y = 0; y < ROWS; y++) {
+          const type = grid[x][y];
+          ctx.fillStyle = type === TILE.WATER ? '#1d4ed8' : (type === TILE.LAND ? '#2d4a1d' : '#4b5563');
+          ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+      }
+
+      // 나무
+      for (let t of trees) {
+        ctx.fillStyle = '#15803d';
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 마을 건물
+      for (let b of buildings) {
+        let v = villages.find(v => v.id === b.villageId);
+        ctx.fillStyle = v ? v.color : '#4b5563';
+        ctx.fillRect(b.x - 10, b.y - 10, 20, 20);
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(b.x - 3, b.y - 3, 6, 6);
+      }
+
+      // 인간 및 좀비
+      for (let h of humans) h.draw();
+      for (let z of zombies) z.draw();
+
+      // 운석 및 이펙트
+      for (let m of meteors) m.draw();
+
+      for (let i = effects.length - 1; i >= 0; i--) {
+        let eff = effects[i];
+        eff.life--;
+        ctx.beginPath();
+        ctx.arc(eff.x, eff.y, eff.radius, 0, Math.PI * 2);
+        if (eff.type === 'heal') {
+          ctx.fillStyle = `rgba(74, 222, 128, ${eff.life / 20 * 0.4})`;
+          ctx.fill();
+        } else if (eff.type === 'explosion') {
+          ctx.fillStyle = `rgba(239, 68, 68, ${eff.life / 25 * 0.6})`;
+          ctx.fill();
+        }
+        if (eff.life <= 0) effects.splice(i, 1);
+      }
+
+      ctx.restore();
+
+      // UI 정보 갱신
+      document.getElementById('popCount').innerText = humans.length;
+      document.getElementById('villageCount').innerText = villages.length;
+      document.getElementById('zombieCount').innerText = zombies.length;
+
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
 </body>
 </html>
