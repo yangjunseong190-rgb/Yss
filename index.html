@@ -533,6 +533,8 @@
     let villages = [];
     let buildings = [];
     let trees = [];
+    let mines = [];
+    let crops = [];
     let meteors = [];
     let effects = [];
 
@@ -544,33 +546,43 @@
         this.x = x;
         this.y = y;
         this.wood = 0;
+        this.stone = 0;
+        this.iron = 0;
+        this.gold = 0;
+        this.food = 0;
       }
     }
+
 
     class Human {
       constructor(x, y, race = 'human') {
         this.x = x;
         this.y = y;
-        this.race = race; // 'human', 'elf', 'orc', 'dwarf'
+        this.race = race;
         this.villageId = null;
 
-        // 종족별 기본 스탯 설정
         let baseSpeed = 1.6 + Math.random() * 0.6;
         let baseHp = 100;
 
         if (this.race === 'elf') {
-          baseSpeed *= 1.2; // 엘프: 이동속도 +20%
+          baseSpeed *= 1.2;
         } else if (this.race === 'orc') {
-          baseHp = 150;     // 오크: 기본 체력 +50
+          baseHp = 150;
         } else if (this.race === 'dwarf') {
-          baseSpeed *= 0.9; // 드워프: 이동속도 -10%
-          baseHp = 130;     // 드워프: 기본 체력 높음
+          baseSpeed *= 0.9;
+          baseHp = 130;
         }
 
         this.hp = baseHp;
         this.maxHp = baseHp;
         this.speed = baseSpeed;
-        this.wood = 0;
+        
+        // 자원 들기 및 장비 상태
+        this.carriedType = null; // 'wood', 'stone', 'iron', 'gold', 'food'
+        this.carriedAmount = 0;
+        this.hasWeapon = false; // 무기 (공격력 +3)
+        this.hasArmor = false;  // 갑옷 (피해 30% 감쇄)
+
         this.vx = (Math.random() - 0.5) * this.speed;
         this.vy = (Math.random() - 0.5) * this.speed;
         this.walkTimer = 0;
@@ -585,7 +597,7 @@
           if (grid[tileX][tileY] === TILE.MOUNTAIN) speedMult = 0.5;
         }
 
-        // 1. 소속 찾기 / 마을 생성 로직
+        // 1. 소속 마을 찾기 및 창설
         if (!this.villageId) {
           let nearVillage = villages.find(v => Math.hypot(v.x - this.x, v.y - this.y) < 180);
           if (nearVillage) {
@@ -602,7 +614,22 @@
 
         let myVillage = villages.find(v => v.id === this.villageId);
 
-        // 2. 타겟팅 (좀비 또는 적대 종족/마을)
+        // 대장간을 통한 무기/갑옷 제작 및 착용 (자원 소비)
+        if (myVillage) {
+          let hasForge = buildings.some(b => b.villageId === myVillage.id && b.type === 'forge');
+          if (hasForge) {
+            if (!this.hasWeapon && myVillage.iron >= 5) {
+              myVillage.iron -= 5;
+              this.hasWeapon = true;
+            }
+            if (!this.hasArmor && myVillage.gold >= 3) {
+              myVillage.gold -= 3;
+              this.hasArmor = true;
+            }
+          }
+        }
+
+        // 2. 적 대성/전투 타겟팅
         let target = null;
         let minDist = 120;
 
@@ -615,15 +642,9 @@
           for (let h of humans) {
             if (h === this) continue;
             let isEnemy = false;
-
-            // 오크는 타 종족에 대한 공격성이 높음 / 타 종족 간 다른 마을 공격
-            if (this.race === 'orc' && h.race !== 'orc') {
-              isEnemy = true;
-            } else if (h.race === 'orc' && this.race !== 'orc') {
-              isEnemy = true;
-            } else if (this.villageId && h.villageId && h.villageId !== this.villageId) {
-              isEnemy = true;
-            }
+            if (this.race === 'orc' && h.race !== 'orc') isEnemy = true;
+            else if (h.race === 'orc' && this.race !== 'orc') isEnemy = true;
+            else if (this.villageId && h.villageId && h.villageId !== this.villageId) isEnemy = true;
 
             if (isEnemy) {
               let d = Math.hypot(h.x - this.x, h.y - this.y);
@@ -632,68 +653,109 @@
           }
         }
 
-        // 3. 이동 및 공격 동작
+        // 3. 전투, 자원 운반, 채집 및 건설 동작
         if (target) {
           const angle = Math.atan2(target.y - this.y, target.x - this.x);
           this.vx = Math.cos(angle) * this.speed * speedMult;
           this.vy = Math.sin(angle) * this.speed * speedMult;
 
           if (minDist < 10) {
-            // 오크 공격력 증가, 드워프 피격 방어력 반영 (피해 40% 감쇄)
             let attackDmg = (this.race === 'orc') ? 3.5 : 1.8;
+            if (this.hasWeapon) attackDmg += 3.0; // 무기 착용시 공격력 증가
+
             if (target.race === 'dwarf') attackDmg *= 0.6;
+            if (target.hasArmor) attackDmg *= 0.7; // 갑옷 착용시 피격 방어력 반영
+
             target.hp -= attackDmg;
           }
+        } else if (this.carriedAmount >= 5 && myVillage) {
+          // 마을 창고로 자원 반납
+          const angle = Math.atan2(myVillage.y - this.y, myVillage.x - this.x);
+          this.vx = Math.cos(angle) * this.speed * speedMult;
+          this.vy = Math.sin(angle) * this.speed * speedMult;
+
+          if (Math.hypot(myVillage.x - this.x, myVillage.y - this.y) < 15) {
+            myVillage[this.carriedType] += this.carriedAmount;
+            this.carriedAmount = 0;
+            this.carriedType = null;
+          }
         } else {
-          // 채집 및 건물 건설
-          let nearestTree = null;
-          let treeDist = 150;
+          // 채집 대상 검색 (나무, 광산, 밭)
+          let nearestNode = null;
+          let nodeDist = 150;
+          let nodeType = null;
+
           for (let t of trees) {
             let d = Math.hypot(t.x - this.x, t.y - this.y);
-            if (d < treeDist) { treeDist = d; nearestTree = t; }
+            if (d < nodeDist) { nodeDist = d; nearestNode = t; nodeType = 'wood'; }
+          }
+          for (let c of crops) {
+            let d = Math.hypot(c.x - this.x, c.y - this.y);
+            if (d < nodeDist) { nodeDist = d; nearestNode = c; nodeType = 'food'; }
+          }
+          for (let m of mines) {
+            let d = Math.hypot(m.x - this.x, m.y - this.y);
+            if (d < nodeDist) { nodeDist = d; nearestNode = m; nodeType = m.type; }
           }
 
-          if (nearestTree && this.wood < 5) {
-            const angle = Math.atan2(nearestTree.y - this.y, nearestTree.x - this.x);
+          if (nearestNode && this.carriedAmount < 5) {
+            const angle = Math.atan2(nearestNode.y - this.y, nearestNode.x - this.x);
             this.vx = Math.cos(angle) * this.speed * speedMult;
             this.vy = Math.sin(angle) * this.speed * speedMult;
 
-            if (treeDist < 12) {
-              // 드워프는 채집 효율 2배 (+2), 타 종족은 (+1)
-              this.wood += (this.race === 'dwarf') ? 2 : 1;
+            if (nodeDist < 12) {
+              let gatherAmt = (this.race === 'dwarf') ? 2 : 1;
+              this.carriedType = nodeType;
+              this.carriedAmount += gatherAmt;
 
               // 엘프는 나무를 채집할 때 파괴하지 않음
-              if (this.race !== 'elf') {
-                trees = trees.filter(t => t !== nearestTree);
+              if (nodeType === 'wood') {
+                if (this.race !== 'elf') trees = trees.filter(t => t !== nearestNode);
+              } else if (nodeType === 'food') {
+                crops = crops.filter(c => c !== nearestNode);
+              } else {
+                mines = mines.filter(m => m !== nearestNode);
               }
             }
-          } else if (this.wood >= 5 && myVillage) {
-            buildings.push({ x: this.x, y: this.y, villageId: this.villageId, hp: 150 });
-            this.wood = 0;
-          } else {
-            this.walkTimer--;
-            if (this.walkTimer <= 0) {
-              const angle = Math.random() * Math.PI * 2;
-              this.vx = Math.cos(angle) * this.speed * speedMult;
-              this.vy = Math.sin(angle) * this.speed * speedMult;
-              this.walkTimer = Math.floor(Math.random() * 50) + 30;
+          } else if (myVillage) {
+            // 건물 건설 조건 체크 (풍차, 대장간, 집)
+            let vBuildings = buildings.filter(b => b.villageId === myVillage.id);
+            let hasWindmill = vBuildings.some(b => b.type === 'windmill');
+            let hasForge = vBuildings.some(b => b.type === 'forge');
+
+            if (myVillage.wood >= 10 && myVillage.stone >= 5 && !hasWindmill) {
+              myVillage.wood -= 10;
+              myVillage.stone -= 5;
+              buildings.push({ x: this.x, y: this.y, villageId: this.villageId, type: 'windmill', hp: 200 });
+            } else if (myVillage.wood >= 15 && myVillage.stone >= 10 && !hasForge) {
+              myVillage.wood -= 15;
+              myVillage.stone -= 10;
+              buildings.push({ x: this.x, y: this.y, villageId: this.villageId, type: 'forge', hp: 250 });
+            } else if (myVillage.wood >= 5) {
+              myVillage.wood -= 5;
+              buildings.push({ x: this.x, y: this.y, villageId: this.villageId, type: 'house', hp: 150 });
+            } else {
+              this.walkTimer--;
+              if (this.walkTimer <= 0) {
+                const angle = Math.random() * Math.PI * 2;
+                this.vx = Math.cos(angle) * this.speed * speedMult;
+                this.vy = Math.sin(angle) * this.speed * speedMult;
+                this.walkTimer = Math.floor(Math.random() * 50) + 30;
+              }
             }
           }
         }
 
         this.x += this.vx;
         this.y += this.vy;
-
         this.x = Math.max(10, Math.min(WORLD_WIDTH - 10, this.x));
         this.y = Math.max(10, Math.min(WORLD_HEIGHT - 10, this.y));
 
-        // 자국 건물 근처 체력 회복 및 번식
+        // 건물 근처 체력 회복 및 번식
         if (this.villageId) {
           for (let b of buildings) {
             if (b.villageId === this.villageId && Math.hypot(b.x - this.x, b.y - this.y) < 40) {
               this.hp = Math.min(this.maxHp, this.hp + 0.1);
-
-              // 인간은 높은 번식력 (확률 2배)
               let breedChance = (this.race === 'human') ? 0.004 : 0.002;
               if (Math.random() < breedChance && humans.length < 400) {
                 let child = new Human(this.x + 10, this.y + 10, this.race);
@@ -709,19 +771,31 @@
         ctx.save();
         ctx.translate(this.x, this.y);
 
-        // 종족별 피부색 구분
-        let skinColor = '#ffdbac'; // 인간
-        if (this.race === 'orc') skinColor = '#4ade80';   // 오크 (초록)
-        if (this.race === 'elf') skinColor = '#fef08a';   // 엘프 (밝은 피부)
-        if (this.race === 'dwarf') skinColor = '#d97706'; // 드워프 (구리색)
+        let skinColor = '#ffdbac';
+        if (this.race === 'orc') skinColor = '#4ade80';
+        if (this.race === 'elf') skinColor = '#fef08a';
+        if (this.race === 'dwarf') skinColor = '#d97706';
 
         ctx.fillStyle = skinColor;
         ctx.fillRect(-3, -10, 6, 5);
 
-        // 마을 색상 적용 (소속 없으면 회색)
         let myVillage = villages.find(v => v.id === this.villageId);
         ctx.fillStyle = myVillage ? myVillage.color : '#9ca3af';
         ctx.fillRect(-4, -5, 8, 7);
+
+        // 갑옷 착용 시 시각화 (은색 조끼)
+        if (this.hasArmor) {
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillRect(-4, -5, 8, 4);
+        }
+
+        // 무기 착용 시 시각화 (칼 도트)
+        if (this.hasWeapon) {
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(4, -6, 2, 8);
+          ctx.fillStyle = '#b45309';
+          ctx.fillRect(3, 1, 4, 2);
+        }
 
         ctx.fillStyle = '#1f2937';
         ctx.fillRect(-3, 2, 2, 4);
@@ -737,6 +811,7 @@
         ctx.restore();
       }
     }
+
 
 
       update() {
@@ -1131,10 +1206,8 @@
     // 게임 시작 시 깨끗한 빈 세계로 초기화
     function startGame() {
       document.getElementById('startScreen').classList.remove('active');
-      
       resetCamera();
       
-      // 지형 생성 (주변 해안가 처리)
       for (let x = 0; x < COLS; x++) {
         for (let y = 0; y < ROWS; y++) {
           if (x < 5 || x > COLS-6 || y < 5 || y > ROWS-6) {
@@ -1145,7 +1218,6 @@
         }
       }
 
-      // 생명체 없는 깨끗한 빈 상태로 초기화
       humans = [];
       zombies = [];
       villages = [];
@@ -1153,12 +1225,27 @@
       meteors = [];
       effects = [];
       trees = [];
+      mines = [];
+      crops = [];
 
-      // 자연물(나무만 일부 배치)
+      // 나무 생성
       for (let i = 0; i < 80; i++) {
         trees.push({ x: Math.random() * (WORLD_WIDTH - 200) + 100, y: Math.random() * (WORLD_HEIGHT - 200) + 100 });
       }
+
+      // 밭(crops) 생성
+      for (let i = 0; i < 40; i++) {
+        crops.push({ x: Math.random() * (WORLD_WIDTH - 200) + 100, y: Math.random() * (WORLD_HEIGHT - 200) + 100 });
+      }
+
+      // 광산(mines: stone, iron, gold) 생성
+      const mineTypes = ['stone', 'stone', 'iron', 'iron', 'gold'];
+      for (let i = 0; i < 35; i++) {
+        let type = mineTypes[Math.floor(Math.random() * mineTypes.length)];
+        mines.push({ x: Math.random() * (WORLD_WIDTH - 200) + 100, y: Math.random() * (WORLD_HEIGHT - 200) + 100, type: type });
+      }
     }
+
 
     function loop() {
       for (let step = 0; step < gameSpeed; step++) {
@@ -1168,6 +1255,19 @@
 
         zombies = zombies.filter(z => z.hp > 0);
         for (let z of zombies) z.update();
+
+        // 자원 지속 리젠
+        if (Math.random() < 0.03 && trees.length < 150) {
+          trees.push({ x: Math.random() * (WORLD_WIDTH - 100) + 50, y: Math.random() * (WORLD_HEIGHT - 100) + 50 });
+        }
+        if (Math.random() < 0.02 && crops.length < 80) {
+          crops.push({ x: Math.random() * (WORLD_WIDTH - 100) + 50, y: Math.random() * (WORLD_HEIGHT - 100) + 50 });
+        }
+        if (Math.random() < 0.015 && mines.length < 60) {
+          const mineTypes = ['stone', 'stone', 'iron', 'iron', 'gold'];
+          let type = mineTypes[Math.floor(Math.random() * mineTypes.length)];
+          mines.push({ x: Math.random() * (WORLD_WIDTH - 100) + 50, y: Math.random() * (WORLD_HEIGHT - 100) + 50, type: type });
+        }
 
         // 주민이 한 명도 없는 마을은 멸망 처리
         villages = villages.filter(v => humans.some(h => h.villageId === v.id));
@@ -1196,6 +1296,23 @@
         }
       }
 
+      // 밭 (crops) 렌더링
+      for (let c of crops) {
+        ctx.fillStyle = '#eab308';
+        ctx.fillRect(c.x - 4, c.y - 4, 8, 8);
+      }
+
+      // 광산 (mines) 렌더링 (돌, 철, 금 도트 색상 구분)
+      for (let m of mines) {
+        if (m.type === 'stone') ctx.fillStyle = '#6b7280';
+        else if (m.type === 'iron') ctx.fillStyle = '#94a3b8';
+        else if (m.type === 'gold') ctx.fillStyle = '#facc15';
+
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       // 나무
       for (let t of trees) {
         ctx.fillStyle = '#15803d';
@@ -1204,14 +1321,38 @@
         ctx.fill();
       }
 
-      // 마을 건물
+      // 마을 건물 (유형별 분화: 집, 대장간, 풍차)
       for (let b of buildings) {
         let v = villages.find(v => v.id === b.villageId);
-        ctx.fillStyle = v ? v.color : '#4b5563';
-        ctx.fillRect(b.x - 10, b.y - 10, 20, 20);
-        ctx.fillStyle = '#fef08a';
-        ctx.fillRect(b.x - 3, b.y - 3, 6, 6);
+        let baseColor = v ? v.color : '#4b5563';
+
+        if (b.type === 'forge') {
+          // 대장간: 검은색 지붕과 중앙 주황색 모닥불
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(b.x - 12, b.y - 12, 24, 24);
+          ctx.fillStyle = baseColor;
+          ctx.fillRect(b.x - 10, b.y - 10, 20, 20);
+          ctx.fillStyle = '#f97316';
+          ctx.fillRect(b.x - 4, b.y - 4, 8, 8);
+        } else if (b.type === 'windmill') {
+          // 풍차: 갈색 둥근 몸통과 십자 날개
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(b.x - 8, b.y - 8, 16, 16);
+          ctx.strokeStyle = '#f8fafc';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(b.x - 12, b.y - 12); ctx.lineTo(b.x + 12, b.y + 12);
+          ctx.moveTo(b.x + 12, b.y - 12); ctx.lineTo(b.x - 12, b.y + 12);
+          ctx.stroke();
+        } else {
+          // 일반 집 (house)
+          ctx.fillStyle = baseColor;
+          ctx.fillRect(b.x - 10, b.y - 10, 20, 20);
+          ctx.fillStyle = '#fef08a';
+          ctx.fillRect(b.x - 3, b.y - 3, 6, 6);
+        }
       }
+
 
       // 인간 및 좀비
       for (let h of humans) h.draw();
