@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>모바일 AI 유전 진화 시뮬레이터</title>
+  
+  <!-- 모바일 홈 화면 앱(PWA) 전용 메타 태그 추가 -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AI 진화 시뮬">
+  <meta name="theme-color" content="#121212">
+
+  <style>
+    * { box-sizing: border-box; touch-action: manipulation; }
+    body { 
+      margin: 0; 
+      padding: 12px;
+      background: #121212; 
+      color: #eee; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      min-height: 100vh;
+    }
+    h2 { margin: 8px 0 12px 0; font-size: 1.1rem; text-align: center; }
+    .stats { 
+      width: 100%;
+      max-width: 500px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      background: #1e1e1e;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 10px;
+    }
+    canvas { 
+      background: #181818; 
+      border-radius: 10px; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
+      width: 100%;
+      max-width: 500px;
+      height: auto;
+      touch-action: none;
+    }
+    .controls { 
+      width: 100%;
+      max-width: 500px;
+      display: flex; 
+      gap: 8px; 
+      margin-top: 12px; 
+    }
+    button { 
+      flex: 1;
+      padding: 12px 8px; 
+      background: #2563eb; 
+      color: white; 
+      border: none; 
+      border-radius: 8px; 
+      font-weight: bold; 
+      font-size: 0.85rem;
+      cursor: pointer; 
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:active { opacity: 0.8; }
+    button.danger { background: #dc2626; }
+    .hint { font-size: 0.75rem; color: #aaa; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h2>디지털 어항: AI 유전 진화 시뮬레이터</h2>
+  
+  <div class="stats">
+    <div>개체 수: <strong id="popCount">0</strong></div>
+    <div>최고 세대: <strong id="maxGen">1</strong></div>
+    <div>평균 속도: <strong id="avgSpeed">0</strong></div>
+    <div>평균 시야: <strong id="avgSense">0</strong></div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+  <div class="hint">💡 화면을 터치하면 해당 위치에 음식이 생깁니다.</div>
+
+  <div class="controls">
+    <button onclick="addFood(20)">음식 20개</button>
+    <button class="danger" onclick="triggerDisaster()">재앙(50%)</button>
+    <button onclick="resetSim()">리셋</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // 모바일 해상도 맞춤 설정
+    const width = Math.min(window.innerWidth - 24, 500);
+    const height = Math.floor(width * 1.2);
+    canvas.width = width;
+    canvas.height = height;
+
+    let agents = [];
+    let foods = [];
+    let maxGeneration = 1;
+
+    class Agent {
+      constructor(x, y, dna = null, generation = 1) {
+        this.x = x;
+        this.y = y;
+        this.energy = 100;
+        this.generation = generation;
+        
+        if (dna) {
+          this.speed = Math.max(0.6, dna.speed + (Math.random() - 0.5) * 0.8);
+          this.sense = Math.max(15, dna.sense + (Math.random() - 0.5) * 10);
+        } else {
+          this.speed = 1.5 + Math.random();
+          this.sense = 30 + Math.random() * 30;
+        }
+
+        this.vx = (Math.random() - 0.5) * this.speed;
+        this.vy = (Math.random() - 0.5) * this.speed;
+      }
+
+      update() {
+        const cost = 0.05 + (this.speed * this.speed * 0.02) + (this.sense * 0.0005);
+        this.energy -= cost;
+
+        let closestFood = null;
+        let minDist = Infinity;
+
+        for (let food of foods) {
+          const dist = Math.hypot(food.x - this.x, food.y - this.y);
+          if (dist < this.sense && dist < minDist) {
+            minDist = dist;
+            closestFood = food;
+          }
+        }
+
+        if (closestFood) {
+          const angle = Math.atan2(closestFood.y - this.y, closestFood.x - this.x);
+          this.vx = Math.cos(angle) * this.speed;
+          this.vy = Math.sin(angle) * this.speed;
+
+          if (minDist < 8) {
+            this.energy += 40;
+            foods = foods.filter(f => f !== closestFood);
+          }
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+        if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+
+        if (this.energy > 180) {
+          this.energy -= 90;
+          const nextGen = this.generation + 1;
+          if (nextGen > maxGeneration) maxGeneration = nextGen;
+          agents.push(new Agent(this.x, this.y, { speed: this.speed, sense: this.sense }, nextGen));
+        }
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.sense, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
+        const r = Math.min(255, Math.floor(this.speed * 60));
+        const b = Math.min(255, Math.floor(this.sense * 3));
+        ctx.fillStyle = `rgb(${r}, 120, ${b})`;
+        ctx.fill();
+      }
+    }
+
+    // 터치로 음식 설치
+    function handleTouch(e) {
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches ? e.touches[0] : e;
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      foods.push({ x, y });
+    }
+
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleTouch(e); });
+    canvas.addEventListener('click', handleTouch);
+
+    function addFood(count) {
+      for (let i = 0; i < count; i++) {
+        foods.push({
+          x: Math.random() * (canvas.width - 20) + 10,
+          y: Math.random() * (canvas.height - 20) + 10
+        });
+      }
+    }
+
+    function triggerDisaster() {
+      agents = agents.filter(() => Math.random() > 0.5);
+    }
+
+    function resetSim() {
+      agents = [];
+      foods = [];
+      maxGeneration = 1;
+      for (let i = 0; i < 12; i++) {
+        agents.push(new Agent(canvas.width / 2, canvas.height / 2));
+      }
+      addFood(30);
+    }
+
+    function updateStats() {
+      document.getElementById('popCount').innerText = agents.length;
+      document.getElementById('maxGen').innerText = maxGeneration;
+
+      if (agents.length > 0) {
+        const avgSpd = agents.reduce((a, b) => a + b.speed, 0) / agents.length;
+        const avgSns = agents.reduce((a, b) => a + b.sense, 0) / agents.length;
+        document.getElementById('avgSpeed').innerText = avgSpd.toFixed(2);
+        document.getElementById('avgSense').innerText = avgSns.toFixed(1);
+      }
+    }
+
+    function loop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (Math.random() < 0.08) addFood(1);
+
+      ctx.fillStyle = '#4ade80';
+      for (let food of foods) {
+        ctx.fillRect(food.x - 3, food.y - 3, 6, 6);
+      }
+
+      agents = agents.filter(a => a.energy > 0);
+      for (let agent of agents) {
+        agent.update();
+        agent.draw();
+      }
+
+      updateStats();
+      requestAnimationFrame(loop);
+    }
+
+    resetSim();
+    loop();
+  </script>
+</body>
+</html>
