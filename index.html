@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>월드박스 디럭스 시뮬레이터</title>
+  <title>월드박스 디럭스 시뮬레이터 Ver 4.0</title>
   
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -33,7 +33,7 @@
       flex-direction: column;
     }
 
-    /* 상단 요약바 및 시간 컨트롤 */
+    /* 상단 상태바 */
     .header {
       height: 48px;
       background: #1e1e24;
@@ -55,9 +55,9 @@
     .stat-badge {
       display: flex;
       align-items: center;
-      gap: 3px;
+      gap: 4px;
       background: #121215;
-      padding: 4px 6px;
+      padding: 4px 8px;
       border-radius: 6px;
       border: 1px solid #3a3a42;
     }
@@ -131,7 +131,7 @@
       box-shadow: 0 4px 6px rgba(0,0,0,0.4);
     }
 
-    /* 하단 2단 컨트롤 구조 */
+    /* 하단 툴바 패널 */
     .control-panel {
       background: #16161a;
       border-top: 2px solid #33333d;
@@ -140,7 +140,6 @@
       z-index: 10;
     }
 
-    /* 카테고리 선택 탭 */
     .category-tabs {
       display: flex;
       background: #0d0d10;
@@ -165,7 +164,6 @@
       border-bottom: 2px solid #3b82f6;
     }
 
-    /* 하단 슬라이드형 갓 파워 툴바 */
     .toolbar-wrapper {
       height: 64px;
       overflow-x: auto;
@@ -206,22 +204,22 @@
     }
     .tool-btn span { font-size: 1.1rem; }
 
-    /* 메뉴 모달 레이어 */
+    /* 메인 화면 / 모달 화면 공통 모듈 */
     .modal-overlay {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(4px);
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(6px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 100;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.2s ease;
+      transition: opacity 0.25s ease;
     }
 
     .modal-overlay.active {
@@ -231,15 +229,15 @@
 
     .modal-card {
       width: 90%;
-      max-width: 420px;
-      max-height: 80vh;
+      max-width: 440px;
+      max-height: 82vh;
       background: #1e1e24;
       border: 2px solid #3b82f6;
-      border-radius: 12px;
-      padding: 18px;
+      border-radius: 14px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8);
       touch-action: auto;
     }
 
@@ -253,16 +251,19 @@
     }
 
     .modal-title {
-      font-size: 1.1rem;
+      font-size: 1.2rem;
       font-weight: bold;
       color: #60a5fa;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .close-btn {
       background: transparent;
       border: none;
       color: #aaa;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       cursor: pointer;
     }
 
@@ -276,44 +277,105 @@
     .log-version {
       font-weight: bold;
       color: #f59e0b;
-      margin-top: 10px;
-      font-size: 0.9rem;
+      margin-top: 12px;
+      font-size: 0.95rem;
     }
 
     .log-list {
-      margin: 6px 0 14px 0;
+      margin: 6px 0 12px 0;
       padding-left: 0;
       list-style: none;
-      font-size: 0.8rem;
+      font-size: 0.82rem;
       color: #ccc;
       line-height: 1.6;
     }
 
-    .log-list li {
-      margin-bottom: 2px;
-    }
-
     .btn-action {
       width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      background: #2563eb;
+      padding: 12px;
+      margin-top: 12px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
+      font-size: 1rem;
       font-weight: bold;
       cursor: pointer;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
     }
   </style>
 </head>
 <body>
 
-  <!-- 상단 상태바 & 시간 배속 컨트롤 & 메뉴 버튼 -->
+  <!-- 시작 메인 메뉴 화면 -->
+  <div class="modal-overlay active" id="startScreen">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">🌍 월드박스 디럭스</div>
+        <span style="font-size: 0.75rem; color: #888;">Ver 4.0</span>
+      </div>
+      
+      <div class="modal-body">
+        <div style="text-align: center; margin: 10px 0 20px 0;">
+          <h2 style="margin: 0; color: #fff; font-size: 1.4rem;">창세 시뮬레이터</h2>
+          <p style="margin: 6px 0 0 0; color: #aaa; font-size: 0.8rem;">자신만의 세계와 문명을 직접 다스려보세요!</p>
+        </div>
+
+        <div style="border-top: 1px solid #333; padding-top: 10px;">
+          <div style="font-weight: bold; color: #60a5fa; font-size: 0.9rem; margin-bottom: 6px;">📜 패치노트 (업데이트 기록)</div>
+          
+          <div class="log-version">Ver 4.0 (문명 대개편 & 시작 메뉴) 🏰</div>
+          <ul class="log-list">
+            <li>- 시작 메인 메뉴 화면 도입 (게임 제목, 패치노트, 플레이 버튼) 🎮</li>
+            <li>- 게임 시작 시 빈 세계(생명체 없음)로 시작 🌍</li>
+            <li>- 소속 없는 무소속 주민 추가 및 동적 다중 마을/문명 창설 시스템 구축 🏛️</li>
+            <li>- 주민들이 모여 독립적인 국기와 색상을 가진 다양한 마을을 건설 🚩</li>
+          </ul>
+
+          <div class="log-version">Ver 3.2</div>
+          <ul class="log-list">
+            <li>- 게임 내 메뉴 화면 및 실시간 패치노트 시스템 추가 📜</li>
+          </ul>
+
+          <div class="log-version">Ver 3.1</div>
+          <ul class="log-list">
+            <li>- 하단 툴바 카테고리 탭 및 슬라이드 UI 대개편 🎛️</li>
+          </ul>
+
+          <div class="log-version">Ver 2.2</div>
+          <ul class="log-list">
+            <li>- '시점 이동' 버튼 삭제 및 버튼 재터치 토글 방식 전환 👆</li>
+            <li>- 핀치 줌(Pinch-to-Zoom) 복구 및 조작감 고도화 🤏</li>
+          </ul>
+
+          <div class="log-version">Ver 2.1</div>
+          <ul class="log-list">
+            <li>- 아이폰 꾹 누르기 완전 차단 및 터치 하이라이트 제거 📱</li>
+          </ul>
+
+          <div class="log-version">Ver 2.0</div>
+          <ul class="log-list">
+            <li>- 픽셀 도트 그래픽 개편, Zoom 및 드래그, 주민 체력/수명 시스템 ⏳</li>
+            <li>- 포식자 삭제 🗑️ / 독성 음식 삭제 🗑️</li>
+          </ul>
+
+          <div class="log-version">Ver 1.0 (태초의 시련)</div>
+          <ul class="log-list">
+            <li>- 초기 포식자, 독성 음식, 에너지 바 구현 🦁</li>
+          </ul>
+        </div>
+      </div>
+
+      <button class="btn-action" onclick="startGame()">▶️ 게임 시작하기</button>
+    </div>
+  </div>
+
+  <!-- 상단 상태바 -->
   <div class="header">
     <div class="stats-group">
-      <div class="stat-badge">🔴 <span id="redCount" style="color:#f87171">0</span></div>
-      <div class="stat-badge">🔵 <span id="blueCount" style="color:#60a5fa">0</span></div>
-      <div class="stat-badge">🧟 <span id="zombieCount" style="color:#4ade80">0</span></div>
+      <div class="stat-badge">👨‍👩‍👧‍👦 인구 <span id="popCount" style="color:#60a5fa">0</span></div>
+      <div class="stat-badge">🏰 마을 <span id="villageCount" style="color:#f59e0b">0</span></div>
+      <div class="stat-badge">🧟 좀비 <span id="zombieCount" style="color:#4ade80">0</span></div>
     </div>
     
     <div class="right-group">
@@ -326,6 +388,7 @@
     </div>
   </div>
 
+  <!-- 게임 메인 영역 -->
   <div id="canvas-container">
     <canvas id="canvas"></canvas>
     
@@ -347,11 +410,8 @@
     <div class="toolbar-wrapper">
       <div class="toolbar">
         <!-- 생물 / 문명 카테고리 -->
-        <button class="tool-btn active" data-category="life" id="tool-red" onclick="selectTool('red')">
-          <span>🔴</span>레드국
-        </button>
-        <button class="tool-btn" data-category="life" id="tool-blue" onclick="selectTool('blue')">
-          <span>🔵</span>블루국
+        <button class="tool-btn active" data-category="life" id="tool-human" onclick="selectTool('human')">
+          <span>🧍</span>주민 생성
         </button>
         <button class="tool-btn" data-category="life" id="tool-zombie" onclick="selectTool('zombie')">
           <span>🧟</span>좀비
@@ -382,66 +442,36 @@
     </div>
   </div>
 
-  <!-- 메뉴 및 패치노트 모달 -->
+  <!-- 인게임 메뉴 / 패치노트 모달 -->
   <div class="modal-overlay" id="menuModal">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">⚙️ 시스템 메뉴 & 패치노트</div>
+        <div class="modal-title">⚙️ 메뉴 & 패치노트</div>
         <button class="close-btn" onclick="toggleMenu(false)">✕</button>
       </div>
       
       <div class="modal-body">
-        <div class="log-version">Ver 3.3</div>
+        <div class="log-version">Ver 4.0</div>
         <ul class="log-list">
-          <li>- 좀비 감염 시 게임이 멈추던 무한 루프 버그 수정 🐛</li>
+          <li>- 시작 메인 메뉴 화면 도입 🎮</li>
+          <li>- 게임 시작 시 빈 세계(생명체 없음)로 시작 🌍</li>
+          <li>- 무소속 주민 및 다중 마을/문명 생성 시스템 추가 🏛️</li>
         </ul>
 
         <div class="log-version">Ver 3.2</div>
         <ul class="log-list">
-          <li>- 게임 내 메뉴 화면 추가 📜</li>
-          <li>- 실시간 패치노트(업데이트 로그) 시스템 추가 📝</li>
+          <li>- 게임 내 메뉴 화면 및 패치노트 시스템 📜</li>
         </ul>
 
         <div class="log-version">Ver 3.1</div>
         <ul class="log-list">
-          <li>- 하단 툴바 카테고리 탭(생물/지형/재앙) 및 가로 슬라이드 UI 대개편 🎛️</li>
-        </ul>
-
-        <div class="log-version">Ver 3.0</div>
-        <ul class="log-list">
-          <li>- 문명과 왕국 시스템 추가 🏰</li>
-          <li>- 다양한 지형과 지형 편집 기능 추가 🌍</li>
-          <li>- 운석 낙하와 좀비 바이러스 추가 ☄️</li>
-          <li>- 시간 배속 기능 추가 ⏱️</li>
-        </ul>
-
-        <div class="log-version">Ver 2.2</div>
-        <ul class="log-list">
-          <li>- '시점 이동' 버튼 삭제 및 버튼 재터치 토글 방식으로 전환 👆</li>
-          <li>- 두 손가락 핀치 줌(Pinch-to-Zoom) 복구 및 조작감 고도화 🤏</li>
-        </ul>
-
-        <div class="log-version">Ver 2.1</div>
-        <ul class="log-list">
-          <li>- 아이폰 꾹 누르기(텍스트 선택, 돋보기, 팝업 메뉴) 완전 차단 📱</li>
-          <li>- 터치 하이라이트 번뜩임 현상 제거 ✨</li>
+          <li>- 하단 툴바 카테고리 탭 UI 개편 🎛️</li>
         </ul>
 
         <div class="log-version">Ver 2.0</div>
         <ul class="log-list">
-          <li>- 월드박스 스타일 디자인 개편 🎨</li>
-          <li>- 화면 Zoom(+/-) 버튼 및 스무스 드래그 도입 🔍</li>
-          <li>- 브러시 도구 선택 추가 🖌️</li>
-          <li>- 주민 체력/수명 시스템 추가 ⏳</li>
-          <li>- 포식자 삭제 🗑️</li>
-          <li>- 독성 음식 삭제 🗑️</li>
-        </ul>
-
-        <div class="log-version">Ver 1.0</div>
-        <ul class="log-list">
-          <li>- 포식자 추가 🦁</li>
-          <li>- 독성 음식 추가 🍄</li>
-          <li>- 에너지 바 추가 🔋</li>
+          <li>- 픽셀 도트 그래픽, 줌/드래그, 주민 체력/수명 ⏳</li>
+          <li>- 포식자 및 독성 음식 삭제 🗑️</li>
         </ul>
       </div>
 
@@ -465,11 +495,8 @@
 
     function toggleMenu(show) {
       const modal = document.getElementById('menuModal');
-      if (show) {
-        modal.classList.add('active');
-      } else {
-        modal.classList.remove('active');
-      }
+      if (show) modal.classList.add('active');
+      else modal.classList.remove('active');
     }
 
     const TILE_SIZE = 30;
@@ -482,24 +509,39 @@
     let grid = Array(COLS).fill(0).map(() => Array(ROWS).fill(TILE.LAND));
 
     let scale = 0.4;
-    let offsetX = (canvas.width - WORLD_WIDTH * scale) / 2;
-    let offsetY = (canvas.height - WORLD_HEIGHT * scale) / 2;
+    let offsetX = 0;
+    let offsetY = 0;
 
-    let currentTool = 'red';
+    let currentTool = 'human';
     let gameSpeed = 1;
+
+    // 동적 생성에 사용할 색상들
+    const PALETTE = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308', '#f97316', '#14b8a6'];
 
     let humans = [];
     let zombies = [];
+    let villages = [];
     let buildings = [];
     let trees = [];
     let meteors = [];
     let effects = [];
 
-    class Human {
-      constructor(x, y, faction) {
+    class Village {
+      constructor(x, y) {
+        this.id = Math.random().toString(36).substr(2, 9);
+        this.name = `마을 ${villages.length + 1}`;
+        this.color = PALETTE[villages.length % PALETTE.length];
         this.x = x;
         this.y = y;
-        this.faction = faction;
+        this.wood = 0;
+      }
+    }
+
+    class Human {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.villageId = null; // 초기 무소속
         this.hp = 100;
         this.maxHp = 100;
         this.wood = 0;
@@ -507,7 +549,6 @@
         this.vx = (Math.random() - 0.5) * this.speed;
         this.vy = (Math.random() - 0.5) * this.speed;
         this.walkTimer = 0;
-        this.zombified = false;
       }
 
       update() {
@@ -519,6 +560,26 @@
           if (grid[tileX][tileY] === TILE.MOUNTAIN) speedMult = 0.5;
         }
 
+        // 1. 소속 찾기 / 마을 생성 로직
+        if (!this.villageId) {
+          // 근처 마을이 있는지 검색
+          let nearVillage = villages.find(v => Math.hypot(v.x - this.x, v.y - this.y) < 180);
+          if (nearVillage) {
+            this.villageId = nearVillage.id;
+          } else {
+            // 주변의 무소속 주민 수 파악 후 마을 생성
+            let nearNeutrals = humans.filter(h => !h.villageId && Math.hypot(h.x - this.x, h.y - this.y) < 60);
+            if (nearNeutrals.length >= 2) {
+              let newV = new Village(this.x, this.y);
+              villages.push(newV);
+              nearNeutrals.forEach(h => h.villageId = newV.id);
+            }
+          }
+        }
+
+        let myVillage = villages.find(v => v.id === this.villageId);
+
+        // 2. 타겟팅 (좀비 또는 적대 마을)
         let target = null;
         let minDist = 120;
 
@@ -527,24 +588,26 @@
           if (d < minDist) { minDist = d; target = z; }
         }
 
-        if (!target) {
+        if (!target && this.villageId) {
           for (let h of humans) {
-            if (h.faction !== this.faction && !h.zombified) {
+            if (h.villageId && h.villageId !== this.villageId) {
               let d = Math.hypot(h.x - this.x, h.y - this.y);
               if (d < minDist) { minDist = d; target = h; }
             }
           }
         }
 
+        // 3. 이동 및 동작
         if (target) {
           const angle = Math.atan2(target.y - this.y, target.x - this.x);
           this.vx = Math.cos(angle) * this.speed * speedMult;
           this.vy = Math.sin(angle) * this.speed * speedMult;
 
           if (minDist < 10) {
-            target.hp -= 1.5;
+            target.hp -= 1.8;
           }
         } else {
+          // 채집 및 건물 건설
           let nearestTree = null;
           let treeDist = 150;
           for (let t of trees) {
@@ -561,8 +624,8 @@
               this.wood += 1;
               trees = trees.filter(t => t !== nearestTree);
             }
-          } else if (this.wood >= 5) {
-            buildings.push({ x: this.x, y: this.y, faction: this.faction, hp: 150 });
+          } else if (this.wood >= 5 && myVillage) {
+            buildings.push({ x: this.x, y: this.y, villageId: this.villageId, hp: 150 });
             this.wood = 0;
           } else {
             this.walkTimer--;
@@ -581,11 +644,16 @@
         this.x = Math.max(10, Math.min(WORLD_WIDTH - 10, this.x));
         this.y = Math.max(10, Math.min(WORLD_HEIGHT - 10, this.y));
 
-        for (let b of buildings) {
-          if (b.faction === this.faction && Math.hypot(b.x - this.x, b.y - this.y) < 40) {
-            this.hp = Math.min(this.maxHp, this.hp + 0.1);
-            if (Math.random() < 0.002 && humans.length < 300) {
-              humans.push(new Human(this.x + 10, this.y + 10, this.faction));
+        // 자국 건물 근처 체력 회복 및 번식
+        if (this.villageId) {
+          for (let b of buildings) {
+            if (b.villageId === this.villageId && Math.hypot(b.x - this.x, b.y - this.y) < 40) {
+              this.hp = Math.min(this.maxHp, this.hp + 0.1);
+              if (Math.random() < 0.002 && humans.length < 400) {
+                let child = new Human(this.x + 10, this.y + 10);
+                child.villageId = this.villageId;
+                humans.push(child);
+              }
             }
           }
         }
@@ -598,7 +666,9 @@
         ctx.fillStyle = '#ffdbac';
         ctx.fillRect(-3, -10, 6, 5);
 
-        ctx.fillStyle = this.faction === 'red' ? '#ef4444' : '#3b82f6';
+        // 마을 색상 적용 (소속 없으면 회색)
+        let myVillage = villages.find(v => v.id === this.villageId);
+        ctx.fillStyle = myVillage ? myVillage.color : '#9ca3af';
         ctx.fillRect(-4, -5, 8, 7);
 
         ctx.fillStyle = '#1f2937';
@@ -629,7 +699,6 @@
         let minDist = 200;
 
         for (let h of humans) {
-          if (h.zombified) continue;
           let d = Math.hypot(h.x - this.x, h.y - this.y);
           if (d < minDist) { minDist = d; target = h; }
         }
@@ -641,8 +710,7 @@
 
           if (minDist < 10) {
             target.hp -= 3;
-            if (target.hp <= 0 && !target.zombified) {
-              target.zombified = true;
+            if (target.hp <= 0) {
               zombies.push(new Zombie(target.x, target.y));
             }
           }
@@ -729,10 +797,8 @@
       const tx = Math.floor(pt.x / TILE_SIZE);
       const ty = Math.floor(pt.y / TILE_SIZE);
 
-      if (currentTool === 'red') {
-        humans.push(new Human(pt.x, pt.y, 'red'));
-      } else if (currentTool === 'blue') {
-        humans.push(new Human(pt.x, pt.y, 'blue'));
+      if (currentTool === 'human') {
+        humans.push(new Human(pt.x, pt.y));
       } else if (currentTool === 'tree') {
         trees.push({ x: pt.x + (Math.random()*16-8), y: pt.y + (Math.random()*16-8) });
       } else if (currentTool === 'land' || currentTool === 'water' || currentTool === 'mountain') {
@@ -873,22 +939,33 @@
       document.getElementById(`spd-${spd}`).classList.add('active');
     }
 
-    function init() {
+    // 게임 시작 시 깨끗한 빈 세계로 초기화
+    function startGame() {
+      document.getElementById('startScreen').classList.remove('active');
+      
       resetCamera();
       
+      // 지형 생성 (주변 해안가 처리)
       for (let x = 0; x < COLS; x++) {
         for (let y = 0; y < ROWS; y++) {
           if (x < 5 || x > COLS-6 || y < 5 || y > ROWS-6) {
             grid[x][y] = TILE.WATER;
+          } else {
+            grid[x][y] = TILE.LAND;
           }
         }
       }
 
-      for (let i = 0; i < 15; i++) {
-        humans.push(new Human(WORLD_WIDTH * 0.35 + (Math.random()*100-50), WORLD_HEIGHT * 0.5 + (Math.random()*100-50), 'red'));
-        humans.push(new Human(WORLD_WIDTH * 0.65 + (Math.random()*100-50), WORLD_HEIGHT * 0.5 + (Math.random()*100-50), 'blue'));
-      }
+      // 생명체 없는 깨끗한 빈 상태로 초기화
+      humans = [];
+      zombies = [];
+      villages = [];
+      buildings = [];
+      meteors = [];
+      effects = [];
+      trees = [];
 
+      // 자연물(나무만 일부 배치)
       for (let i = 0; i < 80; i++) {
         trees.push({ x: Math.random() * (WORLD_WIDTH - 200) + 100, y: Math.random() * (WORLD_HEIGHT - 200) + 100 });
       }
@@ -896,12 +973,15 @@
 
     function loop() {
       for (let step = 0; step < gameSpeed; step++) {
-        humans = humans.filter(h => h.hp > 0 && !h.zombified);
+        // 인구 및 마을 관리
+        humans = humans.filter(h => h.hp > 0);
         for (let h of humans) h.update();
 
         zombies = zombies.filter(z => z.hp > 0);
-        const activeZombies = [...zombies];
-        for (let z of activeZombies) z.update();
+        for (let z of zombies) z.update();
+
+        // 주민이 한 명도 없는 마을은 멸망 처리
+        villages = villages.filter(v => humans.some(h => h.villageId === v.id));
 
         for (let i = meteors.length - 1; i >= 0; i--) {
           meteors[i].update();
@@ -918,6 +998,7 @@
       ctx.translate(offsetX, offsetY);
       ctx.scale(scale, scale);
 
+      // 타일 그리기
       for (let x = 0; x < COLS; x++) {
         for (let y = 0; y < ROWS; y++) {
           const type = grid[x][y];
@@ -926,6 +1007,7 @@
         }
       }
 
+      // 나무
       for (let t of trees) {
         ctx.fillStyle = '#15803d';
         ctx.beginPath();
@@ -933,16 +1015,20 @@
         ctx.fill();
       }
 
+      // 마을 건물
       for (let b of buildings) {
-        ctx.fillStyle = b.faction === 'red' ? '#991b1b' : '#1e40af';
+        let v = villages.find(v => v.id === b.villageId);
+        ctx.fillStyle = v ? v.color : '#4b5563';
         ctx.fillRect(b.x - 10, b.y - 10, 20, 20);
         ctx.fillStyle = '#fef08a';
         ctx.fillRect(b.x - 3, b.y - 3, 6, 6);
       }
 
+      // 인간 및 좀비
       for (let h of humans) h.draw();
       for (let z of zombies) z.draw();
 
+      // 운석 및 이펙트
       for (let m of meteors) m.draw();
 
       for (let i = effects.length - 1; i >= 0; i--) {
@@ -962,16 +1048,14 @@
 
       ctx.restore();
 
-      const redCount = humans.filter(h => h.faction === 'red').length;
-      const blueCount = humans.filter(h => h.faction === 'blue').length;
-      document.getElementById('redCount').innerText = redCount;
-      document.getElementById('blueCount').innerText = blueCount;
+      // UI 정보 갱신
+      document.getElementById('popCount').innerText = humans.length;
+      document.getElementById('villageCount').innerText = villages.length;
       document.getElementById('zombieCount').innerText = zombies.length;
 
       requestAnimationFrame(loop);
     }
 
-    init();
     loop();
   </script>
 </body>
