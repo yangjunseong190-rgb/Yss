@@ -221,7 +221,7 @@
 <body>
 
 <div class="container">
-    <h1>✨ AI 예문 & 표현 학습기 <span class="version-badge">v2.2</span></h1>
+    <h1>✨ AI 예문 & 표현 학습기 <span class="version-badge">v2.3</span></h1>
 
     <div class="nav-tabs">
         <button class="tab-btn active" onclick="switchStep(1)">1. 단어 등록</button>
@@ -335,13 +335,14 @@
         if (stepNum === 2) renderStep2();
     }
 
-    // 최신 API 규격 및 키 정밀 검증 로직 (v2.2)
+    // 정식 지원 모델 및 할당량 오류 대응 로직 (v2.3)
     async function requestGeminiAPI(prompt, apiKey) {
         if (!apiKey) throw new Error("API 키가 입력되지 않았습니다. 2단계에서 키를 입력해 주세요.");
 
         const candidateModels = [
-            'gemini-2.5-flash',
-            'gemini-2.0-flash'
+            'gemini-2.0-flash',
+            'gemini-1.5-flash',
+            'gemini-1.5-pro'
         ];
 
         let errors = [];
@@ -361,19 +362,18 @@
                 }
 
                 if (data.error) {
-                    // API Key 불일치 또는 권한 문제 발생 시 바로 전달
-                    if (data.error.code === 400 || data.error.status === 'INVALID_ARGUMENT' || data.error.message.includes('API key')) {
-                        throw new Error("입력하신 API Key가 올바르지 않습니다. AI Studio에서 발급받은 키를 다시 확인해 주세요.");
+                    if (data.error.message.includes("Quota exceeded") || data.error.message.includes("limit: 0")) {
+                        throw new Error("API 키의 Free Tier 할당량이 0입니다.\nGoogle AI Studio(aistudio.google.com)에서 'Create API key in new project'로 키를 다시 발급받으세요.");
                     }
                     errors.push(`[${model}] ${data.error.message}`);
                 }
             } catch (e) {
-                if (e.message.includes("API Key가 올바르지 않습니다")) throw e;
+                if (e.message.includes("Free Tier 할당량")) throw e;
                 errors.push(e.message);
             }
         }
 
-        throw new Error("API 연결 실패:\n" + errors.join('\n') + "\n\n2단계에서 API Key를 새로 발급받아 재입력해 주세요.");
+        throw new Error("API 요청 실패:\n" + errors.join('\n'));
     }
 
     async function cleanWordsWithAI(rawText) {
