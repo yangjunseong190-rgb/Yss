@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>VOCA MASTER - AI 예문 & 콜로케이션 학습기</title>
-    <!-- OCR(이미지 텍스트 추출) 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         html, body {
@@ -286,7 +285,6 @@
         { id: 3, word: "persistent", meaning: "끈기 있는, 지속적인", collo: "" }
     ];
 
-    // 페이지 진입 시 실행
     window.addEventListener('DOMContentLoaded', () => {
         const savedKey = localStorage.getItem('voca_gemini_key');
         if (savedKey) {
@@ -320,28 +318,23 @@
         if (stepNum === 2) renderStep2();
     }
 
-    // AI를 사용하여 불필요한 단어(한국어, 고유명사, 이상한 문자 등) 정제
+    // 1차 JS 정제 + 2차 AI 필터링
     async function cleanWordsWithAI(rawText) {
-        const apiKey = localStorage.getItem('voca_gemini_key') || document.getElementById('apiKeyInput').value.trim();
+        // 1차 필터링: 순수 영문 알파벳으로 이루어진 3글자 이상 단어만 자바스크립트로 추출 (한국어, 숫자, 1~2글자 제거)
+        const matched = rawText.match(/[a-zA-Z]+/g);
+        if (!matched) return "";
         
-        if (!apiKey) {
-            promptApiKey();
-            return rawText;
-        }
+        const firstPass = [...new Set(matched.filter(w => w.length >= 3))].join(', ');
+        if (!firstPass) return "";
 
+        const apiKey = localStorage.getItem('voca_gemini_key') || document.getElementById('apiKeyInput').value.trim();
+        if (!apiKey) return firstPass;
+
+        // 2차 필터링: AI를 이용해 사람 이름, 지명, 오탈자, 특수 단어 제외
         try {
-            const prompt = `다음 텍스트에서 학습에 필요한 '순수 일반 영단어'만 골라내줘.
+            const prompt = `다음 영단어 목록에서 사람 이름(John, Mary 등), 도시/나라 이름, 의미 없는 철자 오류를 제외하고, '실제 학습용 일반 영어 단어'만 남겨서 쉼표(,)로 구분해 출력해줘. 다른 설명은 절대 하지 마.
 
-[제외 기준]
-1. 한국어 번역이나 한글 설명 전체 제외
-2. 사람 이름, 지역명 등 고유명사 제외
-3. meaningless 한 단일 알파벳(a, b, x 등)이나 기호/특수문자 제외
-4. 일반적인 영어 단어(명사, 동사, 형용사, 부사 등)만 남길 것
-
-출력 형식: 오직 쉼표(,)로만 구분된 영단어 목록만 출력해줘. (다른 인사말이나 설명은 절대 넣지 마)
-
-[원문 텍스트]
-${rawText}`;
+목록: ${firstPass}`;
 
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
                 method: 'POST',
@@ -350,13 +343,15 @@ ${rawText}`;
             });
 
             const data = await response.json();
-            return data.candidates[0].content.parts[0].text.trim();
+            if (data.candidates && data.candidates[0].content.parts[0].text) {
+                return data.candidates[0].content.parts[0].text.replace(/\n/g, '').trim();
+            }
         } catch (e) {
-            return rawText;
+            console.error(e);
         }
+        return firstPass;
     }
 
-    // 텍스트 파일 업로드
     async function handleTxtFile(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -372,19 +367,18 @@ ${rawText}`;
             const inputArea = document.getElementById('wordInput');
             inputArea.value = inputArea.value ? inputArea.value + '\n' + cleanedWords : cleanedWords;
             status.style.display = 'none';
-            alert("파일에서 유용한 영단어만 깔끔하게 추출했습니다!");
+            alert("파일에서 유용한 영단어만 추출했습니다!");
         };
         reader.readAsText(file);
     }
 
-    // 이미지 파일 업로드
     async function handleImgFile(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const status = document.getElementById('ocrStatus');
         status.style.display = 'block';
-        status.innerText = "⚡ 1/2단계: 이미지 분석 중...";
+        status.innerText = "⚡ 1/2단계: 이미지에서 글자 읽는 중...";
 
         try {
             const result = await Tesseract.recognize(file, 'eng');
@@ -395,7 +389,7 @@ ${rawText}`;
             
             const inputArea = document.getElementById('wordInput');
             inputArea.value = inputArea.value ? inputArea.value + '\n' + cleanedWords : cleanedWords;
-            alert("사진 속 글자 중 유용한 영단어만 추출했습니다!");
+            alert("사진속 글자 중 유용한 영단어만 추출했습니다!");
         } catch (e) {
             alert("이미지 처리 중 오류가 발생했습니다.");
         } finally {
