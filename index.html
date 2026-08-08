@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>VOCA MASTER - AI 단어장</title>
     <style>
+        /* 다크모드 및 아이폰 선택 하이라이트 방지 */
         html, body {
             background-color: #000000 !important;
             color: #ffffff !important;
@@ -189,7 +190,7 @@
         <button class="tab-btn" onclick="switchStep(5)">🔁 복습</button>
     </div>
 
-    <!-- 1단계: 단어 등록 -->
+    <!-- 1단계 -->
     <div id="step1" class="step-panel active">
         <h2>📥 1단계: 단어 등록</h2>
         <p style="margin-bottom: 10px;">영어 단어만 입력하면 한글 뜻을 자동으로 채워줍니다.</p>
@@ -200,15 +201,15 @@
         <button class="btn-primary" onclick="addWords()">단어 등록하기</button>
     </div>
 
-    <!-- 2단계: 뜻 검토 및 설정 -->
+    <!-- 2단계 -->
     <div id="step2" class="step-panel">
         <h2>⚙️ 2단계: 뜻 확인 및 설정</h2>
         <div id="editWordList" style="margin-bottom: 20px; max-height: 200px; overflow-y: auto;"></div>
 
         <h2>🤖 AI 채점 설정 (선택사항)</h2>
         <div class="form-group" style="margin-top: 8px;">
-            <label>Gemini API Key (미입력 시 기본 유효성 검사 적용)</label>
-            <input type="text" id="apiKeyInput" placeholder="AI 채점용 API 키 입력">
+            <label>Gemini API Key</label>
+            <input type="text" id="apiKeyInput" placeholder="발급받으신 AI 키 입력">
         </div>
 
         <h2>학습 방식 설정</h2>
@@ -234,13 +235,13 @@
         </div>
     </div>
 
-    <!-- 3단계: 단어 학습 -->
+    <!-- 3단계 -->
     <div id="step3" class="step-panel">
         <h2>📖 3단계: 단어 학습</h2>
         <div id="studyContainer"></div>
     </div>
 
-    <!-- 4단계: 테스트 (ALL 주관식) -->
+    <!-- 4단계 -->
     <div id="step4" class="step-panel">
         <h2>📝 4단계: 주관식 테스트</h2>
         <div class="form-group" style="margin-top: 10px;">
@@ -253,7 +254,7 @@
         <div id="quizContainer" style="margin-top: 16px;"></div>
     </div>
 
-    <!-- 5단계: 복습하기 -->
+    <!-- 5단계 -->
     <div id="step5" class="step-panel">
         <h2>🔁 내 단어장 & 오답 복습</h2>
         <div id="reviewList" style="margin-top: 10px;"></div>
@@ -372,7 +373,6 @@
         }
     }
 
-    /* --- 4단계 주관식 및 AI 채점 엔진 --- */
     function renderQuiz() {
         if (wordsDb.length === 0) return;
         const type = document.getElementById('quizTypeSelect').value;
@@ -407,7 +407,6 @@
         }
     }
 
-    // AI 채점 함수 (Gemini API 호출 및 의미 비교)
     async function checkMeaningAI(word, correctMeaning, id) {
         const userAns = document.getElementById('quizAns').value.trim();
         if (!userAns) return alert("뜻을 입력해주세요.");
@@ -436,7 +435,6 @@
                 isCorrect = checkBasicMatch(userAns, correctMeaning);
             }
         } else {
-            // API Key가 없을 때는 유연한 키워드 매칭 수행
             isCorrect = checkBasicMatch(userAns, correctMeaning);
         }
 
