@@ -541,11 +541,28 @@
         this.name = `왕국 ${kingdoms.length + 1}`;
         this.color = village.color;
         this.villages = [village.id];
+        this.capitalVillageId = village.id; // 첫 마을을 수도로 지정
         this.king = null;
+        
+        // 외교 행렬 (State: 'PEACE', 'WAR', 'ALLIANCE')
+        this.diplomacy = {};
+      }
+
+      // 외교 상태 설정 (양방향 반영)
+      setDiplomacy(targetKingdomId, state) {
+        this.diplomacy[targetKingdomId] = state;
+        let targetK = kingdoms.find(k => k.id === targetKingdomId);
+        if (targetK) {
+          targetK.diplomacy[this.id] = state;
+        }
+      }
+
+      getDiplomacy(targetKingdomId) {
+        return this.diplomacy[targetKingdomId] || 'PEACE';
       }
 
       update() {
-        // 왕국 내 소속 주민 중 능력치(외교+내정) 합이 가장 높은 주민을 King으로 지정
+        // 왕국 내 능력치(외교+내정) 최고 존엄 주민을 King으로 선출
         let kingdomHumans = humans.filter(h => {
           let v = villages.find(v => v.id === h.villageId);
           return v && this.villages.includes(v.id);
@@ -560,8 +577,16 @@
         } else {
           this.king = null;
         }
+
+        // 미설정된 타 왕국과의 초기 관계를 PEACE(평화)로 초기화
+        for (let otherK of kingdoms) {
+          if (otherK.id !== this.id && !this.diplomacy[otherK.id]) {
+            this.setDiplomacy(otherK.id, 'PEACE');
+          }
+        }
       }
     }
+
 
     let buildings = [];
     let trees = [];
@@ -591,6 +616,9 @@
         this.maxPopBonus = 0;      // 최대 인구수 증가 버프
         this.buildingHpBonus = 0;  // 건물 체력 증가 버프
         this.hasRoads = false;      // 도로 건설 버프
+
+        // 충성도 (초기값 100)
+        this.loyalty = 100;
       }
 
       updateCulture() {
@@ -619,7 +647,50 @@
           }
         }
       }
+
+      updateLoyalty() {
+        let myKingdom = kingdoms.find(k => k.id === this.kingdomId);
+        if (!myKingdom) return;
+
+        // 1) 수도와의 거리 계산
+        let capitalVillage = villages.find(v => v.id === myKingdom.capitalVillageId);
+        let distToCapital = capitalVillage ? Math.hypot(capitalVillage.x - this.x, capitalVillage.y - this.y) : 0;
+
+        // 2) King과 Mayor 간의 능력치 차이 계산
+        let kingPower = myKingdom.king ? (myKingdom.king.diplomacy + myKingdom.king.stewardship) : 0;
+        let mayorPower = this.mayor ? (this.mayor.diplomacy + this.mayor.stewardship) : 0;
+
+        // 충성도 연산 (수도가 멀거나, 영주 능력이 국왕보다 압도적일수록 충성도 감소)
+        let distPenalty = distToCapital / 400;
+        let powerDiff = mayorPower - kingPower;
+
+        if (powerDiff > 0 || distPenalty > 1) {
+          this.loyalty -= (distPenalty * 0.03) + (powerDiff * 0.02);
+        } else {
+          this.loyalty = Math.min(100, this.loyalty + 0.04);
+        }
+
+        // 3) 충성도 20 이하 시 독립 선포 및 기존 왕국에 전쟁 선포
+        if (this.loyalty <= 20) {
+          this.triggerRebellion(myKingdom);
+        }
+      }
+
+      triggerRebellion(oldKingdom) {
+        // 기존 왕국에서 해당 마을 탈퇴
+        oldKingdom.villages = oldKingdom.villages.filter(vId => vId !== this.id);
+
+        // 독립 왕국 창설
+        let newKingdom = new Kingdom(this);
+        this.kingdomId = newKingdom.id;
+        this.loyalty = 100;
+        kingdoms.push(newKingdom);
+
+        // 이전 왕국과 전쟁(WAR) 상태로 돌입
+        newKingdom.setDiplomacy(oldKingdom.id, 'WAR');
+      }
     }
+
 
     class Human {
       constructor(x, y, race = 'human') {
@@ -686,6 +757,7 @@
         }
 
         let myVillage = villages.find(v => v.id === this.villageId);
+        let myKingdom = myVillage ? kingdoms.find(k => k.id === myVillage.kingdomId) : null;
 
         // 대장간을 통한 무기/갑옷 제작 및 착용 (자원 소비)
         if (myVillage) {
@@ -702,22 +774,34 @@
           }
         }
 
-        // 2. 적 대성/전투 타겟팅
+        // 2. 적 유닛 및 전쟁 침략 타겟팅
         let target = null;
         let minDist = 120;
 
+        // A. 최우선 적: 좀비 탐색
         for (let z of zombies) {
           let d = Math.hypot(z.x - this.x, z.y - this.y);
           if (d < minDist) { minDist = d; target = z; }
         }
 
+        // B. 적대 인간 탐색 (종족 대립 또는 WAR 상태인 왕국 주민)
         if (!target) {
           for (let h of humans) {
             if (h === this) continue;
             let isEnemy = false;
+
             if (this.race === 'orc' && h.race !== 'orc') isEnemy = true;
             else if (h.race === 'orc' && this.race !== 'orc') isEnemy = true;
-            else if (this.villageId && h.villageId && h.villageId !== this.villageId) isEnemy = true;
+
+            // 외교 상태(WAR) 확인
+            if (myKingdom && h.villageId) {
+              let enemyVillage = villages.find(v => v.id === h.villageId);
+              if (enemyVillage && enemyVillage.kingdomId !== myKingdom.id) {
+                if (myKingdom.getDiplomacy(enemyVillage.kingdomId) === 'WAR') {
+                  isEnemy = true;
+                }
+              }
+            }
 
             if (isEnemy) {
               let d = Math.hypot(h.x - this.x, h.y - this.y);
@@ -726,20 +810,58 @@
           }
         }
 
-        // 3. 전투, 자원 운반, 채집 및 건설 동작
+        // C. 군대 침략 AI: 적 왕국 건물 행군 타깃 설정
+        let targetBuilding = null;
+        if (!target && myKingdom) {
+          let enemyKingdoms = kingdoms.filter(k => k.id !== myKingdom.id && myKingdom.getDiplomacy(k.id) === 'WAR');
+          if (enemyKingdoms.length > 0) {
+            let randomEnemyK = enemyKingdoms[Math.floor(Math.random() * enemyKingdoms.length)];
+            let enemyBuildings = buildings.filter(b => {
+              let v = villages.find(v => v.id === b.villageId);
+              return v && v.kingdomId === randomEnemyK.id;
+            });
+
+            if (enemyBuildings.length > 0) {
+              let bMinDist = Infinity;
+              for (let b of enemyBuildings) {
+                let d = Math.hypot(b.x - this.x, b.y - this.y);
+                if (d < bMinDist) {
+                  bMinDist = d;
+                  targetBuilding = b;
+                }
+              }
+            }
+          }
+        }
+
+        // 3. 전투, 군대 행군/건물 점령, 자원 운반, 채집 및 건설 동작
         if (target) {
+          // 적 유닛 공격
           const angle = Math.atan2(target.y - this.y, target.x - this.x);
           this.vx = Math.cos(angle) * this.speed * speedMult;
           this.vy = Math.sin(angle) * this.speed * speedMult;
 
           if (minDist < 10) {
             let attackDmg = (this.race === 'orc') ? 3.5 : 1.8;
-            if (this.hasWeapon) attackDmg += 3.0; // 무기 착용시 공격력 증가
+            if (this.hasWeapon) attackDmg += 3.0;
 
             if (target.race === 'dwarf') attackDmg *= 0.6;
-            if (target.hasArmor) attackDmg *= 0.7; // 갑옷 착용시 피격 방어력 반영
+            if (target.hasArmor) attackDmg *= 0.7;
 
             target.hp -= attackDmg;
+          }
+        } else if (targetBuilding) {
+          // 적 건물 공격 및 파괴
+          const angle = Math.atan2(targetBuilding.y - this.y, targetBuilding.x - this.x);
+          this.vx = Math.cos(angle) * this.speed * speedMult;
+          this.vy = Math.sin(angle) * this.speed * speedMult;
+
+          if (Math.hypot(targetBuilding.x - this.x, targetBuilding.y - this.y) < 15) {
+            let attackDmg = this.hasWeapon ? 4 : 2;
+            targetBuilding.hp -= attackDmg;
+            if (targetBuilding.hp <= 0) {
+              buildings = buildings.filter(b => b !== targetBuilding);
+            }
           }
         } else if (this.carriedAmount >= 5 && myVillage) {
           // 마을 창고로 자원 반납
@@ -781,7 +903,6 @@
               this.carriedType = nodeType;
               this.carriedAmount += gatherAmt;
 
-              // 엘프는 나무를 채집할 때 파괴하지 않음
               if (nodeType === 'wood') {
                 if (this.race !== 'elf') trees = trees.filter(t => t !== nearestNode);
               } else if (nodeType === 'food') {
@@ -791,7 +912,7 @@
               }
             }
           } else if (myVillage) {
-            // 건물 건설 조건 체크 (문화 레벨 건물 체력 버프 반영)
+            // 건물 건설 조건 체크
             let vBuildings = buildings.filter(b => b.villageId === myVillage.id);
             let hasWindmill = vBuildings.some(b => b.type === 'windmill');
             let hasForge = vBuildings.some(b => b.type === 'forge');
@@ -819,6 +940,30 @@
             }
           }
         }
+
+        this.x += this.vx;
+        this.y += this.vy;
+        this.x = Math.max(10, Math.min(WORLD_WIDTH - 10, this.x));
+        this.y = Math.max(10, Math.min(WORLD_HEIGHT - 10, this.y));
+
+        // 건물 근처 체력 회복 및 번식
+        if (this.villageId) {
+          for (let b of buildings) {
+            if (b.villageId === this.villageId && Math.hypot(b.x - this.x, b.y - this.y) < 40) {
+              this.hp = Math.min(this.maxHp, this.hp + 0.1);
+              let breedChance = (this.race === 'human') ? 0.004 : 0.002;
+              let maxAllowedPop = 400 + (myVillage ? myVillage.maxPopBonus : 0);
+
+              if (Math.random() < breedChance && humans.length < maxAllowedPop) {
+                let child = new Human(this.x + 10, this.y + 10, this.race);
+                child.villageId = this.villageId;
+                humans.push(child);
+              }
+            }
+          }
+        }
+      }
+
 
         this.x += this.vx;
         this.y += this.vy;
@@ -1230,9 +1375,10 @@
         // 주민이 한 명도 없는 마을은 멸망 처리
         villages = villages.filter(v => humans.some(h => h.villageId === v.id));
 
-        // 마을 문화 업데이트 및 왕국(Kingdom) 자동 창설/통합
+        // 마을 문화 업데이트, 충성도 연산 및 왕국(Kingdom) 자동 창설/독립
         for (let v of villages) {
           v.updateCulture();
+          v.updateLoyalty(); // 충성도 계산 및 반란/독립 로직 수행
 
           if (!v.kingdomId) {
             let newK = new Kingdom(v);
@@ -1288,7 +1434,7 @@
         ctx.fillRect(c.x - 4, c.y - 4, 8, 8);
       }
 
-      // 광산 (mines) 렌더링 (돌, 철, 금 도트 색상 구분)
+      // 광산 (mines) 렌더링
       for (let m of mines) {
         if (m.type === 'stone') ctx.fillStyle = '#6b7280';
         else if (m.type === 'iron') ctx.fillStyle = '#94a3b8';
@@ -1313,7 +1459,6 @@
         let baseColor = v ? v.color : '#4b5563';
 
         if (b.type === 'forge') {
-          // 대장간: 검은색 지붕과 중앙 주황색 모닥불
           ctx.fillStyle = '#334155';
           ctx.fillRect(b.x - 12, b.y - 12, 24, 24);
           ctx.fillStyle = baseColor;
@@ -1321,7 +1466,6 @@
           ctx.fillStyle = '#f97316';
           ctx.fillRect(b.x - 4, b.y - 4, 8, 8);
         } else if (b.type === 'windmill') {
-          // 풍차: 갈색 둥근 몸통과 십자 날개
           ctx.fillStyle = '#78350f';
           ctx.fillRect(b.x - 8, b.y - 8, 16, 16);
           ctx.strokeStyle = '#f8fafc';
@@ -1331,7 +1475,6 @@
           ctx.moveTo(b.x + 12, b.y - 12); ctx.lineTo(b.x - 12, b.y + 12);
           ctx.stroke();
         } else {
-          // 일반 집 (house)
           ctx.fillStyle = baseColor;
           ctx.fillRect(b.x - 10, b.y - 10, 20, 20);
           ctx.fillStyle = '#fef08a';
@@ -1373,6 +1516,7 @@
 
       requestAnimationFrame(loop);
     }
+
 
     loop();
   </script>
