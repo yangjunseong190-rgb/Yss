@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>VOCA MASTER - AI 예문 & 콜로케이션 학습기</title>
+    <!-- OCR(이미지 텍스트 추출)을 위한 외부 라이브러리 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         html, body {
             background-color: #000000 !important;
@@ -122,6 +124,32 @@
 
         button.btn-primary:active { background-color: #4f46e5; }
 
+        .file-box {
+            background: #18181b;
+            border: 2px dashed #27272a;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .file-box input[type="file"] {
+            display: none;
+        }
+
+        .btn-file {
+            display: inline-block;
+            background: #27272a;
+            color: #818cf8;
+            border: 1px solid #3f3f46;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            margin: 4px;
+        }
+
         .word-card {
             background: #18181b;
             border: 1px solid #27272a;
@@ -197,7 +225,22 @@
     <!-- 1단계: 단어 등록 -->
     <div id="step1" class="step-panel active">
         <h2>📥 1단계: 단어 추가</h2>
-        <p style="margin-bottom: 12px;">영어 단어를 입력하면 기본 한글 뜻을 자동으로 채워줍니다.</p>
+        
+        <!-- 파일/사진 첨부 영역 -->
+        <div class="file-box">
+            <p style="margin-bottom: 8px; font-weight: bold; color: #f4f4f5;">📄 파일 및 📷 사진으로 등록</p>
+            <label class="btn-file">
+                📄 텍스트 파일 (.txt) 선택
+                <input type="file" id="txtFile" accept=".txt" onchange="handleTxtFile(event)">
+            </label>
+            <label class="btn-file">
+                📷 단어 사진/이미지 선택
+                <input type="file" id="imgFile" accept="image/*" onchange="handleImgFile(event)">
+            </label>
+            <div id="ocrStatus" style="font-size: 11px; color: #818cf8; margin-top: 6px; display: none;">이미지에서 글자를 읽는 중...</div>
+        </div>
+
+        <p style="margin-bottom: 8px;">직접 입력하기:</p>
         <div class="form-group">
             <textarea id="wordInput" rows="5" placeholder="영어 단어를 입력하세요 (줄바꿈 또는 쉼표 구분)&#10;예: resilience, meticulous, persistent, adapt, overcome"></textarea>
             <div id="loadingText" class="loading">⚡ 뜻 자동 번역 중...</div>
@@ -257,6 +300,52 @@
         if (stepNum === 2) renderStep2();
     }
 
+    // 텍스트(.txt) 파일 읽기
+    function handleTxtFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const content = e.target.result;
+            const inputArea = document.getElementById('wordInput');
+            inputArea.value = inputArea.value ? inputArea.value + '\n' + content : content;
+            alert("파일 내용을 가져왔습니다. [단어 등록하기] 버튼을 누르면 뜻이 자동 추가됩니다.");
+        };
+        reader.readAsText(file);
+    }
+
+    // 이미지(사진 OCR) 읽기
+    async function handleImgFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const status = document.getElementById('ocrStatus');
+        status.style.display = 'block';
+        status.innerText = "⚡ 이미지 분석 중... 잠시만 기다려주세요.";
+
+        try {
+            const result = await Tesseract.recognize(file, 'eng');
+            const extractedText = result.data.text;
+            
+            // 영어 단어 형태(문자)만 정제 추출
+            const wordsArr = extractedText.match(/[a-zA-Z]+/g);
+            if (wordsArr && wordsArr.length > 0) {
+                // 3글자 이상 알파벳 단어 중 중복 제거
+                const cleanWords = [...new Set(wordsArr.filter(w => w.length >= 3))].join(', ');
+                const inputArea = document.getElementById('wordInput');
+                inputArea.value = inputArea.value ? inputArea.value + '\n' + cleanWords : cleanWords;
+                alert("사진 속 영어 단어들을 추출했습니다!");
+            } else {
+                alert("사진에서 명확한 영어 단어를 인식하지 못했습니다.");
+            }
+        } catch (e) {
+            alert("이미지 처리 중 오류가 발생했습니다.");
+        } finally {
+            status.style.display = 'none';
+        }
+    }
+
     async function fetchKoreanMeaning(word) {
         try {
             const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|ko`);
@@ -270,7 +359,7 @@
 
     async function addWords() {
         const text = document.getElementById('wordInput').value.trim();
-        if (!text) return alert("단어를 입력해주세요.");
+        if (!text) return alert("단어를 입력하거나 파일/사진을 선택해주세요.");
 
         document.getElementById('loadingText').style.display = 'block';
         const rawList = text.replace(/,/g, '\n').split('\n');
