@@ -57,6 +57,16 @@
             letter-spacing: -0.5px;
         }
 
+        .version-badge {
+            font-size: 11px;
+            background: #6366f1;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 6px;
+            vertical-align: middle;
+            margin-left: 6px;
+        }
+
         .nav-tabs {
             display: flex;
             gap: 6px;
@@ -211,7 +221,7 @@
 <body>
 
 <div class="container">
-    <h1>✨ AI 예문 & 표현 학습기</h1>
+    <h1>✨ AI 예문 & 표현 학습기 <span class="version-badge">v2.1</span></h1>
 
     <div class="nav-tabs">
         <button class="tab-btn active" onclick="switchStep(1)">1. 단어 등록</button>
@@ -325,13 +335,12 @@
         if (stepNum === 2) renderStep2();
     }
 
-    // 여러 API 모델 자동 전환 호환 함수
+    // 여러 API 모델 자동 시도 및 호환 로직 (v2.1)
     async function requestGeminiAPI(prompt, apiKey) {
         const candidateModels = [
             'gemini-2.5-flash',
             'gemini-2.0-flash',
-            'gemini-1.5-flash',
-            'gemini-1.5-flash-latest'
+            'gemini-1.5-flash'
         ];
 
         let lastErr = "";
@@ -350,16 +359,15 @@
                     }
                 } else {
                     const errData = await response.json();
-                    lastErr = errData.error?.message || `HTTP ${response.status}`;
+                    lastErr = `[${model}] ` + (errData.error?.message || `HTTP ${response.status}`);
                 }
             } catch (e) {
                 lastErr = e.message;
             }
         }
-        throw new Error(lastErr || "모든 Gemini 모델 호환 실패");
+        throw new Error(lastErr || "API 키가 올바르지 않거나 권한이 없습니다.");
     }
 
-    // 1차 JS 정제 + 2차 AI 필터링
     async function cleanWordsWithAI(rawText) {
         const matched = rawText.match(/[a-zA-Z]+/g);
         if (!matched) return "";
@@ -371,7 +379,7 @@
         if (!apiKey) return firstPass;
 
         try {
-            const prompt = `다음 영단어 목록에서 사람 이름(John, Mary 등), 도시/나라 이름, 의미 없는 알파벳 조합을 제외하고, 학습용 일반 영단어만 남겨서 쉼표(,)로 구분해 출력해줘. 다른 말은 하지 마.\n\n목록: ${firstPass}`;
+            const prompt = `다음 영단어 목록에서 사람 이름, 도시/나라 이름, 의미 없는 알파벳 조합을 제외하고, 학습용 일반 영단어만 남겨서 쉼표(,)로 구분해 출력해줘. 다른 말은 하지 마.\n\n목록: ${firstPass}`;
             return await requestGeminiAPI(prompt, apiKey);
         } catch (e) {
             console.warn("AI 정제 실패, 1차 정제 결과 사용:", e.message);
