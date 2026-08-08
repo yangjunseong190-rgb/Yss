@@ -157,28 +157,45 @@
             margin: 4px;
         }
 
+        /* 2단계 단어 카드가 개선된 스타일 */
         .word-card {
             background: #18181b;
             border: 1px solid #27272a;
-            border-radius: 10px;
-            padding: 12px;
-            margin-bottom: 10px;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
-        .word-row {
+        .word-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: #34d399;
+            word-break: break-word;
+            letter-spacing: -0.3px;
+        }
+
+        .word-subrow {
             display: flex;
-            justify-content: space-between;
             align-items: center;
             gap: 8px;
+        }
+
+        .word-subrow input {
+            flex: 1;
+            padding: 8px 10px;
+            font-size: 13px;
         }
 
         .btn-action {
             background: #27272a;
             color: #34d399;
             border: 1px solid #3f3f46;
-            padding: 6px 8px;
-            border-radius: 6px;
-            font-size: 11px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 12px;
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
@@ -188,24 +205,25 @@
             background: #ef4444;
             color: #ffffff;
             border: none;
-            padding: 6px 8px;
-            border-radius: 6px;
-            font-size: 11px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 12px;
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
         }
 
         .collo-box {
-            margin-top: 8px;
-            padding: 8px 10px;
+            margin-top: 4px;
+            padding: 10px;
             background: #09090b;
-            border-radius: 6px;
+            border-radius: 8px;
             border-left: 3px solid #10b981;
             font-size: 12px;
             color: #34d399;
             display: none;
             white-space: pre-line;
+            line-height: 1.5;
         }
 
         .loading {
@@ -221,7 +239,7 @@
 <body>
 
 <div class="container">
-    <h1>✨ AI 예문 & 표현 학습기 <span class="version-badge">v3.0 (Groq)</span></h1>
+    <h1>✨ AI 예문 & 표현 학습기 <span class="version-badge">v3.1 (Groq)</span></h1>
 
     <div class="nav-tabs">
         <button class="tab-btn active" onclick="switchStep(1)">1. 단어 등록</button>
@@ -249,15 +267,15 @@
         <p style="margin-bottom: 8px;">직접 입력하기:</p>
         <div class="form-group">
             <textarea id="wordInput" rows="5" placeholder="영어 단어를 입력하세요 (줄바꿈 또는 쉼표 구분)&#10;예: resilience, meticulous, persistent, adapt, overcome"></textarea>
-            <div id="loadingText" class="loading">⚡ 뜻 자동 번역 중...</div>
+            <div id="loadingText" class="loading">⚡ AI가 정확한 단어 뜻을 번역하는 중...</div>
         </div>
         <button class="btn-primary" onclick="addWords()">단어 등록하기</button>
     </div>
 
     <!-- 2단계: 단어 관리 & 콜로케이션 -->
     <div id="step2" class="step-panel">
-        <h2>⚙️ 2단계: 단어 수정 및 자주 쓰이는 표현</h2>
-        <div id="editWordList" style="margin-bottom: 20px; max-height: 280px; overflow-y: auto;"></div>
+        <h2>⚙️ 2단계: 단어 수정 및 주요 표현</h2>
+        <div id="editWordList" style="margin-bottom: 20px; max-height: 320px; overflow-y: auto;"></div>
 
         <h2>🔑 Groq API Key 설정</h2>
         <div class="form-group">
@@ -273,11 +291,12 @@
         <p style="margin-bottom: 14px;">단어들이 서로 이어지는 하나의 임팩트 있는 스토리를 만듭니다.</p>
         
         <div class="form-group">
-            <label>한 문장당 조합할 단어 수 (최대 5개)</label>
+            <label>한 문장당 조합할 단어 수</label>
             <select id="wordsPerSentence">
-                <option value="3">한 문장당 3개 조합</option>
+                <option value="2">한 문장당 2개 조합 (짧은 문장)</option>
+                <option value="3" selected>한 문장당 3개 조합 (추천)</option>
                 <option value="4">한 문장당 4개 조합</option>
-                <option value="5" selected>한 문장당 5개 조합 (추천)</option>
+                <option value="5">한 문장당 5개 조합</option>
                 <option value="1">단어 1개씩 각각 예문 생성</option>
             </select>
         </div>
@@ -335,7 +354,7 @@
         if (stepNum === 2) renderStep2();
     }
 
-    // Groq API 호출 로직 (OpenAI 호환 API)
+    // Groq API 호출
     async function requestGroqAPI(prompt, apiKey) {
         if (!apiKey) throw new Error("API 키가 입력되지 않았습니다. 2단계에서 Groq API 키를 입력해 주세요.");
 
@@ -357,7 +376,7 @@
                     body: JSON.stringify({
                         model: model,
                         messages: [{ role: 'user', content: prompt }],
-                        temperature: 0.7
+                        temperature: 0.5
                     })
                 });
 
@@ -375,9 +394,10 @@
             }
         }
 
-        throw new Error("Groq API 연결 실패: " + lastError + "\n\n2단계에서 API Key를 다시 입력해 주세요.");
+        throw new Error("Groq API 연결 실패: " + lastError);
     }
 
+    // AI 단어 정제
     async function cleanWordsWithAI(rawText) {
         const matched = rawText.match(/[a-zA-Z]+/g);
         if (!matched) return "";
@@ -389,10 +409,10 @@
         if (!apiKey) return firstPass;
 
         try {
-            const prompt = `다음 영단어 목록에서 사람 이름, 도시/나라 이름, 의미 없는 알파벳 조합을 제외하고, 학습용 일반 영단어만 남겨서 쉼표(,)로 구분해 출력해줘. 다른 말은 하지 마.\n\n목록: ${firstPass}`;
+            const prompt = `다음 영단어 목록에서 사람 이름, 도시/나라 이름, 의미 없는 알파벳 조합을 제외하고 일반 영단어만 쉼표(,)로 구분해 출력해줘. 다른 설명 금지.\n\n목록: ${firstPass}`;
             return await requestGroqAPI(prompt, apiKey);
         } catch (e) {
-            console.warn("AI 정제 실패, 1차 정제 결과 사용:", e.message);
+            console.warn("AI 정제 실패:", e.message);
         }
         return firstPass;
     }
@@ -442,15 +462,37 @@
         }
     }
 
-    async function fetchKoreanMeaning(word) {
+    // AI를 통한 단어 뜻 대량 번역
+    async function translateWordsWithAI(wordList) {
+        const apiKey = localStorage.getItem('voca_groq_key') || document.getElementById('apiKeyInput').value.trim();
+        if (!apiKey) return wordList.map(w => ({ word: w, meaning: "뜻 직접 입력" }));
+
         try {
-            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|ko`);
-            const data = await res.json();
-            if (data && data.responseData && data.responseData.translatedText) {
-                return data.responseData.translatedText;
-            }
-        } catch (e) {}
-        return "뜻 직접 입력";
+            const prompt = `다음 영단어들의 핵심 한글 뜻을 1~2개로 간결하게 적어줘. 
+형식: 단어: 한글뜻 (줄바꿈 구분)
+
+단어 목록:
+${wordList.join('\n')}`;
+
+            const resText = await requestGroqAPI(prompt, apiKey);
+            const resultMap = {};
+
+            resText.split('\n').forEach(line => {
+                const parts = line.split(':');
+                if (parts.length >= 2) {
+                    const key = parts[0].trim().toLowerCase();
+                    const val = parts.slice(1).join(':').trim();
+                    resultMap[key] = val;
+                }
+            });
+
+            return wordList.map(w => ({
+                word: w,
+                meaning: resultMap[w.toLowerCase()] || "뜻 직접 입력"
+            }));
+        } catch (e) {
+            return wordList.map(w => ({ word: w, meaning: "뜻 직접 입력" }));
+        }
     }
 
     async function addWords() {
@@ -458,25 +500,25 @@
         if (!text) return alert("단어를 입력하거나 파일/사진을 선택해주세요.");
 
         document.getElementById('loadingText').style.display = 'block';
-        const rawList = text.replace(/,/g, '\n').split('\n');
-        let addedCount = 0;
+        const rawList = text.replace(/,/g, '\n').split('\n').map(w => w.trim()).filter(w => w.length > 0);
+        
+        // 중복 제거
+        const newWords = rawList.filter(w => !wordsDb.some(item => item.word.toLowerCase() === w.toLowerCase()));
 
-        for (let w of rawList) {
-            w = w.trim();
-            if (w && !wordsDb.some(item => item.word.toLowerCase() === w.toLowerCase())) {
-                const autoMeaning = await fetchKoreanMeaning(w);
+        if (newWords.length > 0) {
+            const translated = await translateWordsWithAI(newWords);
+            translated.forEach(item => {
                 wordsDb.push({
                     id: Date.now() + Math.random(),
-                    word: w,
-                    meaning: autoMeaning,
+                    word: item.word,
+                    meaning: item.meaning,
                     collo: ""
                 });
-                addedCount++;
-            }
+            });
         }
 
         document.getElementById('loadingText').style.display = 'none';
-        alert(`${addedCount}개 단어가 등록되었습니다!`);
+        alert(`${newWords.length}개 단어가 등록되었습니다!`);
         document.getElementById('wordInput').value = "";
         switchStep(2);
     }
@@ -491,10 +533,10 @@
 
         listDiv.innerHTML = wordsDb.map((item, idx) => `
             <div class="word-card">
-                <div class="word-row">
-                    <strong style="color:#34d399; width: 28%; font-size:13px; overflow:hidden; text-overflow:ellipsis;">${item.word}</strong>
-                    <input type="text" value="${item.meaning}" style="width: 42%;" onchange="wordsDb[${idx}].meaning = this.value">
-                    <button class="btn-action" onclick="getCollocations(${item.id}, '${item.word}')">💡 주요 표현</button>
+                <div class="word-title">${item.word}</div>
+                <div class="word-subrow">
+                    <input type="text" value="${item.meaning}" placeholder="한글 뜻" onchange="wordsDb[${idx}].meaning = this.value">
+                    <button class="btn-action" onclick="getCollocations(${item.id}, '${item.word}')">💡 표현</button>
                     <button class="btn-delete" onclick="deleteWord(${item.id})">삭제</button>
                 </div>
                 <div id="collo-${item.id}" class="collo-box">${item.collo || ''}</div>
@@ -525,10 +567,10 @@
         }
 
         box.style.display = 'block';
-        box.innerText = "⚡ 자주 쓰이는 표현 찾는 중...";
+        box.innerText = "⚡ 주요 표현 찾는 중...";
 
         try {
-            const prompt = `영어 단어 "${word}"와 자주 함께 쓰이는 대표적인 연어/자주 쓰이는 표현(Collocation) 3가지를 한국어 뜻과 함께 간결하게 리스트로 작성해줘.`;
+            const prompt = `영어 단어 "${word}"의 대표 콜로케이션/자주 쓰는 표현 3가지를 한국어 뜻과 함께 아주 간결하게 적어줘.`;
             const text = await requestGroqAPI(prompt, apiKey);
             targetItem.collo = text;
             box.innerText = text;
@@ -546,7 +588,7 @@
         if (wordsDb.length === 0) return alert("예문을 만들 단어가 없습니다. 1단계에서 단어를 올려주세요.");
 
         const apiKey = localStorage.getItem('voca_groq_key') || document.getElementById('apiKeyInput').value.trim();
-        const comboCount = document.getElementById('wordsPerSentence').value;
+        const comboCount = parseInt(document.getElementById('wordsPerSentence').value);
         const resultDiv = document.getElementById('exampleResult');
         const loading = document.getElementById('aiLoading');
         const genBtn = document.getElementById('genBtn');
@@ -563,24 +605,25 @@
         const wordListStr = wordsDb.map(w => `${w.word} (${w.meaning})`).join(', ');
 
         try {
-            const prompt = `너는 "영단어 예문 학습 도우미"야.
-내가 제공하는 영어 단어 목록을 활용해서 효율적으로 단어를 암기할 수 있도록 예문과 정보를 정리해 줘.
+            const prompt = `너는 영단어 학습 도우미야.
+제시된 단어들만 사용해서 아주 쉽고 간결한 영어 예문 스토리를 만들어줘.
 
-[단어 목록]
+[제시된 단어 목록]
 ${wordListStr}
 
-[작성 규칙]
-1. 위 단어들을 한 문장당 최소 ${comboCount}개 이상씩 묶어서 자연스러운 영어 예문을 작성해 줘. 모든 단어가 최소 한 번씩은 예문에 사용되어야 해.
-2. 각 문장은 문장 1, 2, 3이 따로 놀지 않고, 전체가 자연스럽게 연결되는 하나의 유기적인 스토리(단편 이야기) 형태가 되도록 흐름을 이어줘.
-3. 각 문장마다 아래의 정해진 형식에 맞춰 답변해 줘. 군더더기 서론이나 결론 없이 깔끔하게 출력해 줘.
+[엄격 규칙]
+1. 제시된 단어 목록에 있는 단어들 중에서 한 문장당 정확히 ${comboCount}개씩만 선택해서 조합해. 
+2. 절대로 다른 제시되지 않은 어려운 단어나 복잡한 구문을 추가하지 마.
+3. 각 문장은 10~12단어 안팎의 **짧고 쉬운 문장**이어야 해.
+4. 문장들이 서로 이어지는 하나의 짧은 스토리 형태여야 해.
 
 [출력 형식]
 ### 문장 [번호]
-* **영어 예문:** (생성된 영어 문장)
-* **한글 해석:** (자연스러운 한글 번역)
+* **영어 예문:** (간결한 영어 문장)
+* **한글 해석:** (자연스러운 번역)
 * **포함된 단어:**
-  * 단어1: 한국어 뜻
-  * 단어2: 한국어 뜻
+  * 단어1: 뜻
+  * 단어2: 뜻
 ---`;
 
             const aiText = await requestGroqAPI(prompt, apiKey);
