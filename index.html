@@ -5,162 +5,162 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>영어 단어 학습 도우미</title>
     <style>
-        :root {
-            --bg: #09090b;
-            --card-bg: #18181b;
-            --card-border: #27272a;
-            --primary: #6366f1;
-            --primary-hover: #4f46e5;
-            --text-main: #f4f4f5;
-            --text-sub: #a1a1aa;
-            --accent-green: #10b981;
-            --accent-red: #ef4444;
-        }
-
-        /* 아이폰 꾹 누름 파란 박스 및 텍스트 드래그 방지 */
-        * {
-            box-sizing: border-box;
+        /* --- 다크모드 및 모바일 터치 하이라이트 완전 방지 --- */
+        html, body {
+            background-color: #000000 !important;
+            color: #ffffff !important;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
+            width: 100%;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
         }
 
-        /* 텍스트 입력창은 드래그 및 입력이 가능해야 함 */
+        /* 아이폰 파란색 박스, 터치 하이라이트, 긴 터치 메뉴 전체 방지 */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent !important;
+            -webkit-touch-callout: none !important;
+            -webkit-user-select: none !important;
+            user-select: none !important;
+            outline: none !important;
+        }
+
+        /* 입력창은 타이핑이 가능하도록 선택 허용 */
         input, textarea, select {
-            -webkit-user-select: text;
-            user-select: text;
+            -webkit-user-select: text !important;
+            user-select: text !important;
+        }
+
+        /* 아이폰 인풋 자동완성 시 흰색 배경으로 바뀌는 현상 차단 */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        textarea:-webkit-autofill,
+        textarea:-webkit-autofill:hover,
+        textarea:-webkit-autofill:focus {
+            -webkit-text-fill-color: #ffffff !important;
+            -webkit-box-shadow: 0 0 0px 1000px #18181b inset !important;
+            transition: background-color 5000s ease-in-out 0s;
         }
 
         body {
-            background-color: var(--bg);
-            color: var(--text-main);
             padding: 16px;
             display: flex;
             justify-content: center;
-            min-height: 100vh;
         }
 
         .container {
-            max-width: 600px;
+            max-width: 550px;
             width: 100%;
-            background: var(--card-bg);
-            border-radius: 16px;
-            padding: 24px;
-            border: 1px solid var(--card-border);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            background: #121212;
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid #27272a;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.9);
             display: flex;
             flex-direction: column;
         }
 
         h1 {
             text-align: center;
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--text-main);
+            font-size: 20px;
+            font-weight: 800;
+            color: #ffffff;
             margin-bottom: 20px;
             letter-spacing: -0.5px;
         }
 
-        /* 상단 탭 메뉴 */
+        /* 탭 메뉴 */
         .nav-tabs {
             display: flex;
-            gap: 6px;
-            background: #0f0f12;
+            gap: 4px;
+            background: #18181b;
             padding: 4px;
-            border-radius: 10px;
-            margin-bottom: 24px;
-            border: 1px solid var(--card-border);
-            overflow-x: auto;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #27272a;
         }
 
         .tab-btn {
             flex: 1;
-            padding: 10px 8px;
+            padding: 10px 4px;
             border: none;
             background: none;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            color: var(--text-sub);
-            border-radius: 6px;
-            white-space: nowrap;
+            color: #71717a;
+            border-radius: 8px;
             transition: all 0.2s ease;
         }
 
         .tab-btn.active {
-            color: var(--text-main);
-            background: var(--primary);
+            color: #ffffff;
+            background: #6366f1;
         }
 
         .step-panel { display: none; }
         .step-panel.active { display: block; }
 
-        h2 { font-size: 18px; margin-bottom: 12px; font-weight: 600; }
-        p, label { font-size: 14px; color: var(--text-sub); }
+        h2 { font-size: 16px; margin-bottom: 10px; font-weight: 700; color: #f4f4f5; }
+        p, label { font-size: 13px; color: #a1a1aa; }
 
         .form-group { margin-bottom: 16px; }
-        label { display: block; margin-bottom: 8px; }
+        label { display: block; margin-bottom: 6px; }
 
         input[type="text"], input[type="number"], textarea, select {
             width: 100%;
             padding: 12px;
-            background: #0f0f12;
-            border: 1px solid var(--card-border);
-            border-radius: 8px;
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 10px;
             font-size: 14px;
-            color: var(--text-main);
-            outline: none;
-            transition: border-color 0.2s;
+            color: #ffffff;
+            appearance: none;
         }
 
         input:focus, textarea:focus, select:focus {
-            border-color: var(--primary);
+            border-color: #6366f1 !important;
         }
 
         button.btn-primary {
             width: 100%;
-            background-color: var(--primary);
-            color: white;
+            background-color: #6366f1;
+            color: #ffffff;
             border: none;
             padding: 12px;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: 600;
-            transition: background-color 0.2s;
+            font-weight: 700;
         }
 
-        button.btn-primary:active { background-color: var(--primary-hover); }
+        button.btn-primary:active { background-color: #4f46e5; }
 
-        /* 단어 카드 디자인 */
+        /* 카드 UI */
         .card-box {
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            padding: 32px 16px;
+            border: 1px solid #27272a;
+            border-radius: 14px;
+            padding: 30px 16px;
             text-align: center;
-            margin: 16px 0;
-            background: #0f0f12;
+            margin: 14px 0;
+            background: #18181b;
             cursor: pointer;
-            transition: border-color 0.2s;
         }
 
-        .card-box:active { border-color: var(--primary); }
-        .card-title { font-size: 26px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
-        .card-sub { font-size: 18px; color: var(--accent-green); display: none; margin-top: 10px; }
+        .card-title { font-size: 24px; font-weight: 800; color: #818cf8; margin-bottom: 6px; }
+        .card-sub { font-size: 16px; color: #34d399; display: none; margin-top: 10px; }
 
-        /* 리스트 항목 */
+        /* 단어 리스트 */
         .word-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 16px;
-            background: #0f0f12;
-            border: 1px solid var(--card-border);
-            border-radius: 8px;
+            padding: 12px 14px;
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 10px;
             margin-bottom: 8px;
         }
 
@@ -170,30 +170,28 @@
             text-align: left;
             padding: 12px;
             margin: 8px 0;
-            background: #0f0f12;
-            color: var(--text-main);
-            border: 1px solid var(--card-border);
-            border-radius: 8px;
-            cursor: pointer;
+            background: #18181b;
+            color: #ffffff;
+            border: 1px solid #27272a;
+            border-radius: 10px;
             font-size: 14px;
         }
 
-        .quiz-option:active { border-color: var(--primary); background: #1a1a24; }
+        .quiz-option:active { border-color: #6366f1; background: #27272a; }
 
-        /* 로딩 스피너 */
         .loading {
             display: none;
             text-align: center;
-            color: var(--primary);
-            font-size: 13px;
-            margin-top: 8px;
+            color: #818cf8;
+            font-size: 12px;
+            margin-top: 6px;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>📚 VOCA MASTER</h1>
+    <h1>VOCA MASTER</h1>
 
     <!-- 탭 메뉴 -->
     <div class="nav-tabs">
@@ -207,30 +205,27 @@
     <!-- 1단계: 단어 등록 -->
     <div id="step1" class="step-panel active">
         <h2>📥 1단계: 단어 등록</h2>
-        <p style="margin-bottom: 12px;">단어만 입력하면 뜻을 번역 API로 자동으로 채워줍니다.</p>
+        <p style="margin-bottom: 10px;">단어만 입력하면 한글 뜻을 자동으로 번역하여 채워줍니다.</p>
         <div class="form-group">
-            <textarea id="wordInput" rows="4" placeholder="등록할 단어를 입력하세요&#10;예: apple, banana&#10;delicious"></textarea>
-            <div id="loadingText" class="loading">⚡ 뜻 자동 번역 추출 중...</div>
+            <textarea id="wordInput" rows="4" placeholder="영어 단어를 입력하세요&#10;예: apple, banana&#10;delicious"></textarea>
+            <div id="loadingText" class="loading">⚡ 뜻 자동 번역 중...</div>
         </div>
-        <button class="btn-primary" onclick="addWords()">단어 자동 등록하기</button>
+        <button class="btn-primary" onclick="addWords()">단어 등록하기</button>
 
-        <hr style="border: 0; height: 1px; background: var(--card-border); margin: 24px 0;">
+        <hr style="border: 0; height: 1px; background: #27272a; margin: 20px 0;">
         <h2>📷 사진(OCR) 등록</h2>
-        <p style="margin-bottom: 10px;">교재 및 단어장 이미지를 업로드하세요.</p>
+        <p style="margin-bottom: 8px;">단어장 사진을 선택하세요.</p>
         <input type="file" id="imageInput" accept="image/*" style="margin-bottom: 8px;">
         <button class="btn-primary" onclick="simulateOCR()" style="background: #27272a;">사진에서 단어 추출</button>
     </div>
 
-    <!-- 2단계: 뜻 검토 및 학습 옵션 -->
+    <!-- 2단계: 뜻 검토 및 설정 -->
     <div id="step2" class="step-panel">
-        <h2>⚙️ 2단계: 뜻 검토 및 설정</h2>
-        <p style="margin-bottom: 12px;">자동 채워진 뜻을 확인하거나 직접 수정하세요.</p>
-        
-        <div id="editWordList" style="margin-bottom: 24px; max-height: 250px; overflow-y: auto;"></div>
+        <h2>⚙️ 2단계: 뜻 확인 및 설정</h2>
+        <div id="editWordList" style="margin-bottom: 20px; max-height: 220px; overflow-y: auto;"></div>
 
-        <h2>학습 방식 옵션</h2>
+        <h2>학습 방식 설정</h2>
         <div class="form-group" style="margin-top: 8px;">
-            <label>학습 모드 선택</label>
             <select id="studyModeSelect" onchange="toggleModeOptions()">
                 <option value="card">단어 카드로 학습</option>
                 <option value="example">예문으로 학습</option>
@@ -274,17 +269,14 @@
     <!-- 5단계: 복습하기 -->
     <div id="step5" class="step-panel">
         <h2>🔁 내 단어장 & 복습하기</h2>
-        <p style="margin-bottom: 12px;">테스트에서 틀린 단어들의 오답 횟수를 관리합니다.</p>
-        <div id="reviewList"></div>
+        <div id="reviewList" style="margin-top: 10px;"></div>
     </div>
 </div>
 
 <script>
-    // 기본 데이터
     let wordsDb = [
         { id: 1, word: "resilience", meaning: "회복력", example: "She showed resilience in tough times.", wrongCount: 1 },
-        { id: 2, word: "meticulous", meaning: "꼼꼼한", example: "He is meticulous about his work.", wrongCount: 0 },
-        { id: 3, word: "pragmatic", meaning: "실용적인", example: "We need a pragmatic solution.", wrongCount: 0 }
+        { id: 2, word: "meticulous", meaning: "꼼꼼한", example: "He is meticulous about his work.", wrongCount: 0 }
     ];
 
     function switchStep(stepNum) {
@@ -301,7 +293,7 @@
         if (stepNum === 5) renderStep5();
     }
 
-    // 번역 API 호출 함수 (무료 MyMemory API)
+    // MyMemory 무료 번역 API (자동 뜻 가져오기)
     async function fetchKoreanMeaning(word) {
         try {
             const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|ko`);
@@ -309,19 +301,15 @@
             if (data && data.responseData && data.responseData.translatedText) {
                 return data.responseData.translatedText;
             }
-        } catch (e) {
-            console.error("번역 실패:", e);
-        }
-        return "뜻을 확인해 주세요";
+        } catch (e) {}
+        return "뜻 확인 필요";
     }
 
-    // 1단계: 단어 추가 및 뜻 자동 등록
     async function addWords() {
         const text = document.getElementById('wordInput').value.trim();
         if (!text) return alert("단어를 입력해주세요.");
 
-        const loadingText = document.getElementById('loadingText');
-        loadingText.style.display = 'block';
+        document.getElementById('loadingText').style.display = 'block';
 
         const rawList = text.replace(/,/g, '\n').split('\n');
         let addedCount = 0;
@@ -341,32 +329,26 @@
             }
         }
 
-        loadingText.style.display = 'none';
-        alert(`${addedCount}개 단어의 뜻을 자동으로 찾아 등록했습니다!`);
+        document.getElementById('loadingText').style.display = 'none';
+        alert(`${addedCount}개 단어의 뜻이 자동으로 등록되었습니다!`);
         document.getElementById('wordInput').value = "";
     }
 
     function simulateOCR() {
-        alert("사진에서 단어 [innovation, persistent]를 추출하여 뜻과 함께 등록했습니다!");
+        alert("사진에서 단어를 추출하여 등록했습니다!");
         wordsDb.push(
-            { id: Date.now()+1, word: "innovation", meaning: "혁신", example: "Innovation drives success.", wrongCount: 0 },
-            { id: Date.now()+2, word: "persistent", meaning: "끈기있는", example: "Be persistent in learning.", wrongCount: 0 }
+            { id: Date.now()+1, word: "innovation", meaning: "혁신", example: "Innovation drives success.", wrongCount: 0 }
         );
     }
 
-    // 2단계: 뜻 검토 및 세팅
     function renderStep2() {
         const listDiv = document.getElementById('editWordList');
         listDiv.innerHTML = wordsDb.map((item, idx) => `
             <div class="word-item">
-                <strong style="width: 35%; color:var(--primary);">${item.word}</strong>
-                <input type="text" value="${item.meaning}" style="width: 60%;" onchange="updateMeaning(${idx}, this.value)">
+                <strong style="color:#818cf8; width: 35%;">${item.word}</strong>
+                <input type="text" value="${item.meaning}" style="width: 60%;" onchange="wordsDb[${idx}].meaning = this.value">
             </div>
         `).join('');
-    }
-
-    function updateMeaning(idx, val) {
-        wordsDb[idx].meaning = val;
     }
 
     function toggleModeOptions() {
@@ -375,7 +357,6 @@
         document.getElementById('exampleOptions').style.display = mode === 'example' ? 'block' : 'none';
     }
 
-    // 3단계: 학습 엔진
     function renderStep3() {
         const mode = document.getElementById('studyModeSelect').value;
         const container = document.getElementById('studyContainer');
@@ -390,8 +371,8 @@
                 return `
                     <div class="card-box" onclick="this.querySelector('.card-sub').style.display = 'block'">
                         <div class="card-title">${front}</div>
-                        <div class="card-sub">${back}<br><span style="font-size:12px; color:var(--text-sub);">${item.example}</span></div>
-                        <p style="font-size: 11px; color: var(--text-sub); margin-top: 12px;">(탭하여 뒷면 보기)</p>
+                        <div class="card-sub">${back}<br><span style="font-size:12px; color:#a1a1aa;">${item.example}</span></div>
+                        <p style="font-size: 11px; color: #71717a; margin-top: 10px;">(탭하여 뒷면 확인)</p>
                     </div>
                 `;
             }).join('');
@@ -400,12 +381,12 @@
             let html = "";
             for (let i = 0; i < wordsDb.length; i += num) {
                 const chunk = wordsDb.slice(i, i + num);
-                const wordsStr = chunk.map(w => `<b style="color:var(--primary)">${w.word}</b>(${w.meaning})`).join(', ');
+                const wordsStr = chunk.map(w => `<b style="color:#818cf8">${w.word}</b>(${w.meaning})`).join(', ');
                 const exStr = chunk.map(w => w.example).join(' ');
                 html += `
-                    <div style="background:#0f0f12; border:1px solid var(--card-border); padding:16px; border-radius:10px; margin-bottom:12px;">
-                        <p style="margin-bottom:6px;">🔑 <strong>포함 단어:</strong> ${wordsStr}</p>
-                        <p style="color:var(--text-main);">📖 <strong>예문:</strong> ${exStr}</p>
+                    <div style="background:#18181b; border:1px solid #27272a; padding:14px; border-radius:10px; margin-bottom:10px;">
+                        <p style="margin-bottom:6px;">🔑 <strong>단어:</strong> ${wordsStr}</p>
+                        <p>📖 <strong>예문:</strong> ${exStr}</p>
                     </div>
                 `;
             }
@@ -413,7 +394,6 @@
         }
     }
 
-    // 4단계: 테스트 엔진
     function renderQuiz() {
         if (wordsDb.length === 0) return;
         const type = document.getElementById('quizTypeSelect').value;
@@ -423,9 +403,9 @@
         if (type === 'blank') {
             const blankEx = target.example.replace(new RegExp(target.word, 'gi'), "_______");
             container.innerHTML = `
-                <p><strong>문제:</strong> 빈칸에 들어갈 영어 단어를 적으세요.</p>
-                <div style="background:#0f0f12; padding:16px; margin:12px 0; border-radius:8px; border-left:3px solid var(--primary); font-size:15px;">
-                    "${blankEx}"<br><span style="font-size:12px; color:var(--text-sub);">(뜻: ${target.meaning})</span>
+                <p><strong>문제:</strong> 빈칸에 들어갈 영어 단어는?</p>
+                <div style="background:#18181b; padding:14px; margin:10px 0; border-radius:8px; border-left:3px solid #6366f1;">
+                    "${blankEx}"<br><span style="font-size:12px; color:#a1a1aa;">(뜻: ${target.meaning})</span>
                 </div>
                 <input type="text" id="quizAns" placeholder="영어 단어 입력" style="margin-bottom:10px;">
                 <button class="btn-primary" onclick="checkAnswer('${target.word}', '${target.id}')">정답 제출</button>
@@ -434,14 +414,14 @@
             const options = [target.meaning, "사려 깊은", "충동적인", "복잡한"].sort(() => Math.random() - 0.5);
             container.innerHTML = `
                 <p><strong>문제:</strong> 다음 단어의 올바른 뜻은?</p>
-                <div style="font-size:24px; font-weight:bold; color:var(--primary); margin:16px 0; text-align:center;">${target.word}</div>
+                <div style="font-size:22px; font-weight:bold; color:#818cf8; margin:14px 0; text-align:center;">${target.word}</div>
                 ${options.map(opt => `<button class="quiz-option" onclick="checkChoice('${opt}', '${target.meaning}', '${target.id}')">${opt}</button>`).join('')}
             `;
         } else {
             const options = [target.word, "candid", "meticulous", "ubiquitous"].sort(() => Math.random() - 0.5);
             container.innerHTML = `
                 <p><strong>문제:</strong> 다음 뜻에 해당하는 올바른 단어는?</p>
-                <div style="font-size:22px; font-weight:bold; color:var(--accent-green); margin:16px 0; text-align:center;">${target.meaning}</div>
+                <div style="font-size:20px; font-weight:bold; color:#34d399; margin:14px 0; text-align:center;">${target.meaning}</div>
                 ${options.map(opt => `<button class="quiz-option" onclick="checkChoice('${opt}', '${target.word}', '${target.id}')">${opt}</button>`).join('')}
             `;
         }
@@ -449,22 +429,14 @@
 
     function checkAnswer(correct, id) {
         const userAns = document.getElementById('quizAns').value.trim();
-        if (userAns.toLowerCase() === correct.toLowerCase()) {
-            alert("🎉 정답입니다!");
-        } else {
-            alert(`❌ 오답입니다. 정답은 [${correct}] 입니다.`);
-            markWrong(id);
-        }
+        if (userAns.toLowerCase() === correct.toLowerCase()) alert("🎉 정답입니다!");
+        else { alert(`❌ 오답입니다. 정답은 [${correct}] 입니다.`); markWrong(id); }
         renderQuiz();
     }
 
     function checkChoice(selected, correct, id) {
-        if (selected === correct) {
-            alert("🎉 정답입니다!");
-        } else {
-            alert(`❌ 오답입니다. 정답은 [${correct}] 입니다.`);
-            markWrong(id);
-        }
+        if (selected === correct) alert("🎉 정답입니다!");
+        else { alert(`❌ 오답입니다. 정답은 [${correct}] 입니다.`); markWrong(id); }
         renderQuiz();
     }
 
@@ -473,23 +445,22 @@
         if (item) item.wrongCount++;
     }
 
-    // 5단계: 복습하기
     function renderStep5() {
         const reviewList = document.getElementById('reviewList');
         const wrongWords = wordsDb.filter(w => w.wrongCount > 0);
 
         if (wrongWords.length === 0) {
-            reviewList.innerHTML = "<p style='color:var(--accent-green); font-weight:bold; text-align:center; padding:20px;'>🎉 복습할 오답 단어가 없습니다!</p>";
+            reviewList.innerHTML = "<p style='color:#34d399; font-weight:bold; text-align:center; padding:20px;'>🎉 복습할 오답 단어가 없습니다!</p>";
             return;
         }
 
         reviewList.innerHTML = wrongWords.map(w => `
             <div class="word-item">
                 <div>
-                    <strong style="color:var(--text-main);">${w.word}</strong> - <span style="color:var(--text-sub);">${w.meaning}</span>
-                    <span style="color:var(--accent-red); font-size:12px; margin-left:6px;">(오답 ${w.wrongCount}회)</span>
+                    <strong>${w.word}</strong> - <span style="color:#a1a1aa;">${w.meaning}</span>
+                    <span style="color:#ef4444; font-size:12px;">(오답 ${w.wrongCount}회)</span>
                 </div>
-                <button onclick="clearWrong('${w.id}')" style="background:var(--accent-green); color:white; border:none; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer;">완료</button>
+                <button onclick="clearWrong('${w.id}')" style="background:#34d399; color:#000; border:none; padding:6px 10px; border-radius:6px; font-weight:bold; font-size:12px;">완료</button>
             </div>
         `).join('');
     }
