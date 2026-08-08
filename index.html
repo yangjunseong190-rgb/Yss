@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>VOCA MASTER - AI 예문 & 콜로케이션 학습기</title>
-    <!-- OCR(이미지 텍스트 추출)을 위한 외부 라이브러리 추가 -->
+    <!-- OCR(이미지 텍스트 추출) 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         html, body {
@@ -133,9 +133,7 @@
             margin-bottom: 16px;
         }
 
-        .file-box input[type="file"] {
-            display: none;
-        }
+        .file-box input[type="file"] { display: none; }
 
         .btn-file {
             display: inline-block;
@@ -226,7 +224,6 @@
     <div id="step1" class="step-panel active">
         <h2>📥 1단계: 단어 추가</h2>
         
-        <!-- 파일/사진 첨부 영역 -->
         <div class="file-box">
             <p style="margin-bottom: 8px; font-weight: bold; color: #f4f4f5;">📄 파일 및 📷 사진으로 등록</p>
             <label class="btn-file">
@@ -237,7 +234,7 @@
                 📷 단어 사진/이미지 선택
                 <input type="file" id="imgFile" accept="image/*" onchange="handleImgFile(event)">
             </label>
-            <div id="ocrStatus" style="font-size: 11px; color: #818cf8; margin-top: 6px; display: none;">이미지에서 글자를 읽는 중...</div>
+            <div id="ocrStatus" style="font-size: 11px; color: #818cf8; margin-top: 6px; display: none;">AI가 유용한 단어만 정제하는 중...</div>
         </div>
 
         <p style="margin-bottom: 8px;">직접 입력하기:</p>
@@ -256,7 +253,7 @@
         <h2>🔑 Gemini API Key</h2>
         <div class="form-group">
             <input type="text" id="apiKeyInput" placeholder="발급받은 Gemini API 키 입력">
-            <p style="font-size: 11px; color: #71717a; margin-top: 4px;">* API 키를 넣으면 AI가 스토리 예문과 연어(Collocation) 표현을 상세히 만들어 줍니다.</p>
+            <p style="font-size: 11px; color: #71717a; margin-top: 4px;">* 키는 브라우저에 자동 저장되며 다음 접속 시 다시 입력하지 않으셔도 됩니다.</p>
         </div>
     </div>
 
@@ -289,6 +286,29 @@
         { id: 3, word: "persistent", meaning: "끈기 있는, 지속적인", collo: "" }
     ];
 
+    // 페이지 진입 시 실행
+    window.addEventListener('DOMContentLoaded', () => {
+        const savedKey = localStorage.getItem('voca_gemini_key');
+        if (savedKey) {
+            document.getElementById('apiKeyInput').value = savedKey;
+        } else {
+            promptApiKey();
+        }
+
+        document.getElementById('apiKeyInput').addEventListener('input', (e) => {
+            localStorage.setItem('voca_gemini_key', e.target.value.trim());
+        });
+    });
+
+    function promptApiKey() {
+        const key = prompt("Gemini API Key를 입력해주세요.\n(입력한 키는 브라우저에 자동 저장되어 매번 입력하지 않아도 됩니다):");
+        if (key) {
+            const cleanKey = key.trim();
+            localStorage.setItem('voca_gemini_key', cleanKey);
+            document.getElementById('apiKeyInput').value = cleanKey;
+        }
+    }
+
     function switchStep(stepNum) {
         document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
             btn.classList.toggle('active', idx === stepNum - 1);
@@ -300,45 +320,82 @@
         if (stepNum === 2) renderStep2();
     }
 
-    // 텍스트(.txt) 파일 읽기
-    function handleTxtFile(event) {
+    // AI를 사용하여 불필요한 단어(한국어, 고유명사, 이상한 문자 등) 정제
+    async function cleanWordsWithAI(rawText) {
+        const apiKey = localStorage.getItem('voca_gemini_key') || document.getElementById('apiKeyInput').value.trim();
+        
+        if (!apiKey) {
+            promptApiKey();
+            return rawText;
+        }
+
+        try {
+            const prompt = `다음 텍스트에서 학습에 필요한 '순수 일반 영단어'만 골라내줘.
+
+[제외 기준]
+1. 한국어 번역이나 한글 설명 전체 제외
+2. 사람 이름, 지역명 등 고유명사 제외
+3. meaningless 한 단일 알파벳(a, b, x 등)이나 기호/특수문자 제외
+4. 일반적인 영어 단어(명사, 동사, 형용사, 부사 등)만 남길 것
+
+출력 형식: 오직 쉼표(,)로만 구분된 영단어 목록만 출력해줘. (다른 인사말이나 설명은 절대 넣지 마)
+
+[원문 텍스트]
+${rawText}`;
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text.trim();
+        } catch (e) {
+            return rawText;
+        }
+    }
+
+    // 텍스트 파일 업로드
+    async function handleTxtFile(event) {
         const file = event.target.files[0];
         if (!file) return;
 
+        const status = document.getElementById('ocrStatus');
+        status.style.display = 'block';
+        status.innerText = "⚡ AI가 파일 내용에서 영단어를 정제 중입니다...";
+
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = async function(e) {
             const content = e.target.result;
+            const cleanedWords = await cleanWordsWithAI(content);
             const inputArea = document.getElementById('wordInput');
-            inputArea.value = inputArea.value ? inputArea.value + '\n' + content : content;
-            alert("파일 내용을 가져왔습니다. [단어 등록하기] 버튼을 누르면 뜻이 자동 추가됩니다.");
+            inputArea.value = inputArea.value ? inputArea.value + '\n' + cleanedWords : cleanedWords;
+            status.style.display = 'none';
+            alert("파일에서 유용한 영단어만 깔끔하게 추출했습니다!");
         };
         reader.readAsText(file);
     }
 
-    // 이미지(사진 OCR) 읽기
+    // 이미지 파일 업로드
     async function handleImgFile(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const status = document.getElementById('ocrStatus');
         status.style.display = 'block';
-        status.innerText = "⚡ 이미지 분석 중... 잠시만 기다려주세요.";
+        status.innerText = "⚡ 1/2단계: 이미지 분석 중...";
 
         try {
             const result = await Tesseract.recognize(file, 'eng');
             const extractedText = result.data.text;
             
-            // 영어 단어 형태(문자)만 정제 추출
-            const wordsArr = extractedText.match(/[a-zA-Z]+/g);
-            if (wordsArr && wordsArr.length > 0) {
-                // 3글자 이상 알파벳 단어 중 중복 제거
-                const cleanWords = [...new Set(wordsArr.filter(w => w.length >= 3))].join(', ');
-                const inputArea = document.getElementById('wordInput');
-                inputArea.value = inputArea.value ? inputArea.value + '\n' + cleanWords : cleanWords;
-                alert("사진 속 영어 단어들을 추출했습니다!");
-            } else {
-                alert("사진에서 명확한 영어 단어를 인식하지 못했습니다.");
-            }
+            status.innerText = "⚡ 2/2단계: AI가 불필요한 단어를 걸러내는 중...";
+            const cleanedWords = await cleanWordsWithAI(extractedText);
+            
+            const inputArea = document.getElementById('wordInput');
+            inputArea.value = inputArea.value ? inputArea.value + '\n' + cleanedWords : cleanedWords;
+            alert("사진 속 글자 중 유용한 영단어만 추출했습니다!");
         } catch (e) {
             alert("이미지 처리 중 오류가 발생했습니다.");
         } finally {
@@ -414,7 +471,7 @@
     }
 
     async function getCollocations(id, word) {
-        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        const apiKey = localStorage.getItem('voca_gemini_key') || document.getElementById('apiKeyInput').value.trim();
         const box = document.getElementById(`collo-${id}`);
         const targetItem = wordsDb.find(w => w.id === id);
 
@@ -439,14 +496,10 @@
                 targetItem.collo = text;
                 box.innerText = text;
             } catch (err) {
-                const fallback = `• build ${word} (${word}을/를 기르다)\n• show ${word} (${word}을/를 보이다)\n• high ${word} (높은 수준의 ${word})`;
-                targetItem.collo = fallback;
-                box.innerText = fallback;
+                box.innerText = "표현을 가져오는 중 오류가 발생했습니다.";
             }
         } else {
-            const fallback = `• build ${word} (${word}을/를 기르다)\n• show ${word} (${word}을/를 보이다)\n• high ${word} (높은 수준의 ${word})`;
-            targetItem.collo = fallback;
-            box.innerText = fallback;
+            promptApiKey();
         }
     }
 
@@ -458,11 +511,16 @@
     async function generateExamples() {
         if (wordsDb.length === 0) return alert("예문을 만들 단어가 없습니다. 1단계에서 단어를 올려주세요.");
 
-        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        const apiKey = localStorage.getItem('voca_gemini_key') || document.getElementById('apiKeyInput').value.trim();
         const comboCount = document.getElementById('wordsPerSentence').value;
         const resultDiv = document.getElementById('exampleResult');
         const loading = document.getElementById('aiLoading');
         const genBtn = document.getElementById('genBtn');
+
+        if (!apiKey) {
+            promptApiKey();
+            return;
+        }
 
         loading.style.display = 'block';
         genBtn.disabled = true;
@@ -470,9 +528,8 @@
 
         const wordListStr = wordsDb.map(w => `${w.word} (${w.meaning})`).join(', ');
 
-        if (apiKey) {
-            try {
-                const prompt = `너는 "영단어 예문 학습 도우미"야.
+        try {
+            const prompt = `너는 "영단어 예문 학습 도우미"야.
 내가 제공하는 영어 단어 목록을 활용해서 효율적으로 단어를 암기할 수 있도록 예문과 정보를 정리해 줘.
 
 [단어 목록]
@@ -492,21 +549,18 @@ ${wordListStr}
   * 단어2: 한국어 뜻
 ---`;
 
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
 
-                const data = await response.json();
-                const aiText = data.candidates[0].content.parts[0].text;
-                
-                resultDiv.innerHTML = `<div style="background:#18181b; padding:16px; border-radius:12px; border:1px solid #27272a; white-space:pre-wrap; font-size:14px; line-height:1.7;">${aiText}</div>`;
-            } catch (err) {
-                alert("API Key 오류 또는 요청 실패입니다.");
-            }
-        } else {
-            alert("스토리 예문 기능을 제대로 활용하시려면 2단계에서 Gemini API Key를 입력해주세요!");
+            const data = await response.json();
+            const aiText = data.candidates[0].content.parts[0].text;
+            
+            resultDiv.innerHTML = `<div style="background:#18181b; padding:16px; border-radius:12px; border:1px solid #27272a; white-space:pre-wrap; font-size:14px; line-height:1.7;">${aiText}</div>`;
+        } catch (err) {
+            alert("API Key 오류 또는 요청 실패입니다.");
         }
 
         loading.style.display = 'none';
