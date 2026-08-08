@@ -151,12 +151,27 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 8px;
             padding: 12px 14px;
             background: #18181b;
             border: 1px solid #27272a;
             border-radius: 10px;
             margin-bottom: 8px;
         }
+
+        .btn-delete {
+            background: #ef4444;
+            color: #ffffff;
+            border: none;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .btn-delete:active { background: #dc2626; }
 
         .loading {
             display: none;
@@ -201,10 +216,10 @@
         <button class="btn-primary" onclick="addWords()">단어 등록하기</button>
     </div>
 
-    <!-- 2단계 -->
+    <!-- 2단계 (삭제 버튼 추가됨) -->
     <div id="step2" class="step-panel">
         <h2>⚙️ 2단계: 뜻 확인 및 설정</h2>
-        <div id="editWordList" style="margin-bottom: 20px; max-height: 200px; overflow-y: auto;"></div>
+        <div id="editWordList" style="margin-bottom: 20px; max-height: 220px; overflow-y: auto;"></div>
 
         <h2>🤖 AI 채점 설정 (선택사항)</h2>
         <div class="form-group" style="margin-top: 8px;">
@@ -320,14 +335,27 @@
         document.getElementById('wordInput').value = "";
     }
 
+    // 2단계: 단어 및 뜻 확인 + 삭제 기능
     function renderStep2() {
         const listDiv = document.getElementById('editWordList');
+
+        if (wordsDb.length === 0) {
+            listDiv.innerHTML = "<p style='text-align:center; padding:12px; color:#71717a;'>등록된 단어가 없습니다.</p>";
+            return;
+        }
+
         listDiv.innerHTML = wordsDb.map((item, idx) => `
             <div class="word-item">
-                <strong style="color:#818cf8; width: 35%;">${item.word}</strong>
-                <input type="text" value="${item.meaning}" style="width: 60%;" onchange="wordsDb[${idx}].meaning = this.value">
+                <strong style="color:#818cf8; width: 30%; font-size:13px; overflow:hidden; text-overflow:ellipsis;">${item.word}</strong>
+                <input type="text" value="${item.meaning}" style="width: 50%;" onchange="wordsDb[${idx}].meaning = this.value">
+                <button class="btn-delete" onclick="deleteWord(${item.id})">삭제</button>
             </div>
         `).join('');
+    }
+
+    function deleteWord(id) {
+        wordsDb = wordsDb.filter(item => item.id !== id);
+        renderStep2();
     }
 
     function toggleModeOptions() {
@@ -339,6 +367,11 @@
     function renderStep3() {
         const mode = document.getElementById('studyModeSelect').value;
         const container = document.getElementById('studyContainer');
+
+        if (wordsDb.length === 0) {
+            container.innerHTML = "<p style='text-align:center; padding:20px; color:#71717a;'>학습할 단어가 없습니다. 1단계에서 단어를 올려주세요.</p>";
+            return;
+        }
 
         if (mode === 'card') {
             const dir = document.getElementById('cardDirection').value;
@@ -374,9 +407,13 @@
     }
 
     function renderQuiz() {
-        if (wordsDb.length === 0) return;
-        const type = document.getElementById('quizTypeSelect').value;
         const container = document.getElementById('quizContainer');
+        if (wordsDb.length === 0) {
+            container.innerHTML = "<p style='text-align:center; padding:20px; color:#71717a;'>테스트할 단어가 없습니다.</p>";
+            return;
+        }
+
+        const type = document.getElementById('quizTypeSelect').value;
         const target = wordsDb[Math.floor(Math.random() * wordsDb.length)];
 
         if (type === 'word_to_meaning') {
